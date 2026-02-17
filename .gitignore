@@ -1,0 +1,24 @@
+## LaTeX Auxiliary Files
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+*.toc
+*.blg
+*.bbl
+
+## Output Files
+# Some people prefer to keep PDFs in the repo, 
+# but generally, it is better to ignore them and generate them from the .tex source.
+#*.pdf
+
+## IDE/Editor Specific
+.vscode/
+.idea/
+*.swp
+*~
+
+## Formatting
+# Do NOT ignore .latexindent.yaml as it contains your formatting rules
