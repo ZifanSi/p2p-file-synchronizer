@@ -70,8 +70,15 @@ def get_files_dic():
     Hint: same filtering rules as get_file_info().
     """
     file_dic = {}
-    #YOUR CODE
-
+    for name in os.listdir("."):
+        if not os.path.isfile(name):
+            continue
+        n = name.lower()
+        if n.endswith(".so") or n.endswith(".py") or n.endswith(".dll"):
+            continue
+        if os.path.abspath(name) == os.path.abspath(__file__):
+            continue
+        file_dic[name] = int(os.path.getmtime(name))
     return file_dic
 
 def check_port_avaliable(check_port):
