@@ -267,7 +267,27 @@ class FileSynchronizer(threading.Thread):
         #      f. finally, write the file content to disk with the file name, use os.utime
         #         to set the mtime
         #YOUR CODE
+        try:
+            directory = json.loads(directory_response_message) if directory_response_message else {}
+        except Exception:
+            directory = {}
 
+        local_files = get_files_dic()
+
+        for fname, info in directory.items():
+            try:
+                remote_mtime = int(info.get("mtime", 0))
+            except Exception:
+                continue
+
+            need = False
+            if fname not in local_files:
+                need = True
+            elif remote_mtime > int(local_files[fname]):
+                need = True
+
+            if need:
+                self.syncfile(fname, info)
         #Step 4. construct a KeepAlive message
         #Note KeepAlive msg is sent multiple times, the format can be found in Table 1
         #use json.dumps to convert python dict to json string.
