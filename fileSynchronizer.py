@@ -53,6 +53,7 @@ def get_file_info():
           b. use os.path.getmtime to get mtime, and round down to integer
     """
     file_arr = []
+    #YOUR CODE
     for name in os.listdir("."):
         if not os.path.isfile(name):
             continue
@@ -70,6 +71,7 @@ def get_files_dic():
     Hint: same filtering rules as get_file_info().
     """
     file_dic = {}
+    #YOUR CODE
     for name in os.listdir("."):
         if not os.path.isfile(name):
             continue
@@ -103,6 +105,8 @@ def get_next_avaliable_port(initial_port):
     Return:
     port found to be available; False if no port is available.
     """
+
+    #YOUR CODE
     n = 2**16 - 1
     for p in range(int(initial_port), n + 1):
         if check_port_avaliable(p):
@@ -116,19 +120,19 @@ class FileSynchronizer(threading.Thread):
         threading.Thread.__init__(self)
 
         #Own port and IP address for serving file requests to other peers
-        self.port = port
-        self.host = host
+        self.port = port #YOUR CODE
+        self.host = host #YOUR CODE
 
         #Tracker IP/hostname and port
-        self.trackerhost = trackerhost
-        self.trackerport = trackerport
+        self.trackerhost = trackerhost #YOUR CODE
+        self.trackerport = trackerport #YOUR CODE
 
         self.BUFFER_SIZE = 8192
 
         #Create a TCP socket to communicate with the tracker
-        self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.client.settimeout(180)
-        self._tracker_buf = b''
+        self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #YOUR CODE
+        self.client.settimeout(180) #YOUR CODE
+        self._tracker_buf = b'' #YOUR CODE
 
     
         #Store the message to be sent to the tracker. 
@@ -225,11 +229,29 @@ class FileSynchronizer(threading.Thread):
         #Since self.msg is already initialized in __init__, you can send directly
         #Hint: on send failure, may terminate
         #YOUR CODE
+        try:
+            self.client.sendall(self.msg)
+        except Exception as exc:
+            self.fatal_tracker("Failed to send to tracker", exc)
+            return
 
         #Step 2. now receive a directory response message from tracker
         directory_response_message = ''
         #Hint: read from socket until you receive a full JSON message ending with '\n'
         #YOUR CODE
+        while b"\n" not in self._tracker_buf:
+            try:
+                part = self.client.recv(self.BUFFER_SIZE)
+            except Exception as exc:
+                self.fatal_tracker("Failed to receive from tracker", exc)
+                return
+            if not part:
+                self.fatal_tracker("Tracker closed connection")
+                return
+            self._tracker_buf += part
+
+        line, self._tracker_buf = self._tracker_buf.split(b"\n", 1)
+        directory_response_message = line.decode("utf-8")    
         print('received from tracker:',directory_response_message)
 
         #Step 3. parse the directory response message. If it contains new or
