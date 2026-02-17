@@ -116,17 +116,17 @@ class FileSynchronizer(threading.Thread):
         threading.Thread.__init__(self)
 
         #Own port and IP address for serving file requests to other peers
-        self.port = #YOUR CODE
-        self.host = #YOUR CODE
+        self.port = port
+        self.host = host
 
         #Tracker IP/hostname and port
-        self.trackerhost = #YOUR CODE
-        self.trackerport = #YOUR CODE
+        self.trackerhost = trackerhost
+        self.trackerport = trackerport
 
         self.BUFFER_SIZE = 8192
 
         #Create a TCP socket to communicate with the tracker
-        self.client = #YOUR CODE
+        self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client.settimeout(180)
         self._tracker_buf = b''
 
@@ -136,10 +136,10 @@ class FileSynchronizer(threading.Thread):
         #Refer to Table 1 in Instructions.pdf for the format of the Init message
         #You can use json.dumps to conver a python dictionary to a json string
 	#Encode using UTF-8
-        self.msg = #YOUR CODE
+        self.msg = (json.dumps({"port": self.port, "files": get_file_info()}) + "\n").encode("utf-8")
 
         #Create a TCP socket to serve file requests from peers.
-        self.server = #YOUR CODE
+        self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         try:
             self.server.bind((self.host, self.port))
