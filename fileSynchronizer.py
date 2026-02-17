@@ -103,8 +103,11 @@ def get_next_avaliable_port(initial_port):
     Return:
     port found to be available; False if no port is available.
     """
-
-    #YOUR CODE
+    n = 2**16 - 1
+    for p in range(int(initial_port), n + 1):
+        if check_port_avaliable(p):
+            return p
+    return False
 
 
 class FileSynchronizer(threading.Thread):
