@@ -53,7 +53,15 @@ def get_file_info():
           b. use os.path.getmtime to get mtime, and round down to integer
     """
     file_arr = []
-    #YOUR CODE
+    for name in os.listdir("."):
+        if not os.path.isfile(name):
+            continue
+        n = name.lower()
+        if n.endswith(".so") or n.endswith(".py") or n.endswith(".dll"):
+            continue
+        if os.path.abspath(name) == os.path.abspath(__file__):
+            continue
+        file_arr.append({"name": name, "mtime": int(os.path.getmtime(name))})
 
     return file_arr
 
