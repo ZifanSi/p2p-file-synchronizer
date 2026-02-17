@@ -186,7 +186,19 @@ class FileSynchronizer(threading.Thread):
         filename = buf.split(b"\n", 1)[0].decode("utf-8").strip()
         filename = os.path.basename(filename)       
         #Step 2. read content of that file in binary mode
+        if not os.path.isfile(filename):
+            conn.sendall(b"Content-Length: 0\n")
+            conn.close()
+            return
+
+        with open(filename, "rb") as f:
+            content = f.read()        
         #Step 3. send header "Content-Length: <size>\n" then file bytes
+        header = ("Content-Length: %d\n" % len(content)).encode("utf-8")
+        conn.sendall(header)
+        if content:
+            conn.sendall(content)
+    
         #Step 4. close conn when you are done.
 
     def run(self):
