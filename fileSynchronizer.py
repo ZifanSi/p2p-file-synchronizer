@@ -120,8 +120,8 @@ class FileSynchronizer(threading.Thread):
         threading.Thread.__init__(self)
 
         #Own port and IP address for serving file requests to other peers
-        self.port = port #YOUR CODE
-        self.host = host #YOUR CODE
+        self.port = int(port) #YOUR CODE
+        self.host = int(trackerport) #YOUR CODE
 
         #Tracker IP/hostname and port
         self.trackerhost = trackerhost #YOUR CODE
@@ -304,12 +304,18 @@ class FileSynchronizer(threading.Thread):
         filename -- file name to request
         file_dic -- dict with 'ip', 'port', and 'mtime'
         """
-        #YOUR CODE
+        #YOUR CODE  
         #Step 1. connect to peer and send filename + '\n'
         #Step 2. read header "Content-Length: <size>\n"
         #Step 3. read exactly <size> bytes; if short, discard partial file
         #Step 4. write file to disk (binary), rename from .part when done
         #Step 5. set mtime using os.utime
+        try:
+        finally:
+            try:
+                peer.close()
+            except Exception:
+                pass
 
 if __name__ == '__main__':
     parser = optparse.OptionParser(usage="%prog ServerIP ServerPort")
