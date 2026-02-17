@@ -291,7 +291,7 @@ class FileSynchronizer(threading.Thread):
         #Step 4. construct a KeepAlive message
         #Note KeepAlive msg is sent multiple times, the format can be found in Table 1
         #use json.dumps to convert python dict to json string.
-        self.msg = #YOUR CODE
+        self.msg = (json.dumps({"port": self.port}) + "\n").encode("utf-8") #YOUR CODE
 
         #Step 5. start timer
         t = threading.Timer(5, self.sync)
