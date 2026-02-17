@@ -1,0 +1,2 @@
+Hello from Peer2.
+This is fileB.txt
