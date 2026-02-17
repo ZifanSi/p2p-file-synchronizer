@@ -175,6 +175,16 @@ class FileSynchronizer(threading.Thread):
         '''
         #YOUR CODE
         #Step 1. read the file name terminated by '\n'
+        buf = b""
+        while b"\n" not in buf:
+            part = conn.recv(self.BUFFER_SIZE)
+            if not part:
+                conn.close()
+                return
+            buf += part
+
+        filename = buf.split(b"\n", 1)[0].decode("utf-8").strip()
+        filename = os.path.basename(filename)       
         #Step 2. read content of that file in binary mode
         #Step 3. send header "Content-Length: <size>\n" then file bytes
         #Step 4. close conn when you are done.
