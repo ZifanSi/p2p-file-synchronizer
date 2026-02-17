@@ -200,10 +200,15 @@ class FileSynchronizer(threading.Thread):
             conn.sendall(content)
     
         #Step 4. close conn when you are done.
+        conn.close()
 
     def run(self):
         #Step 1. connect to tracker; on failure, may terminate
-        #YOUR CODE
+        try:
+            self.client.connect((self.trackerhost, self.trackerport))
+        except Exception as exc:
+            self.fatal_tracker("Failed to connect to tracker", exc)
+
         t = threading.Timer(2, self.sync)
         t.start()
         print(('Waiting for connections on port %s' % (self.port)))
