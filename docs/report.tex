@@ -1,0 +1,87 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\geometry{letterpaper, margin=1in}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+% Define colors for code snippets
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstset{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    basicstyle=\ttfamily\footnotesize,
+    breaklines=true,
+    showspaces=false,
+    showstringspaces=false,
+}
+
+\title{Assignment 2: Peer-to-Peer File Synchronizer Report}
+\author{Student Name: \underline{\hspace{4cm}} \\ Student ID: \underline{\hspace{4cm}}}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{System Overview}
+This report details the implementation of a P2P file sharing application designed to synchronize files between end hosts acting as both servers and clients[cite: 7]. The system consists of a centralized tracker for peer discovery and a direct peer-to-peer protocol for binary file transfers[cite: 34, 35].
+
+\section{Implementation of Core Functions}
+The following functions were implemented as per the grading rubrics[cite: 166, 167, 168]:
+
+\begin{itemize}
+    \item \textbf{\texttt{get\_file\_info()}}: Retrieves filenames and last modified times ($mtime$) as integers (seconds since epoch) from the working directory[cite: 68, 166].
+    \item \textbf{\texttt{get\_next\_available\_port()}}: Dynamically binds to an open TCP port for the peer's file-serving listener[cite: 167].
+    \item \textbf{Initializer}: Configures the persistent TCP connection to the tracker and initializes the dual-thread model (Peer-to-Tracker and Peer-to-Peer)[cite: 50, 168].
+\end{itemize}
+
+\section{Protocol Adherence}
+\subsection{Peer-to-Tracker Interaction}
+The synchronizer establishes one persistent connection to the tracker[cite: 50]. 
+\begin{itemize}
+    \item \textbf{Initial Message}: Sent upon startup with the local file list[cite: 57].
+    \item \textbf{Keepalive}: Sent every 5 seconds to maintain "live" status[cite: 70].
+    \item \textbf{JSON Framing}: All messages are UTF-8 JSON objects terminated by a newline ($\setminus$n)[cite: 54].
+\end{itemize}
+
+\subsection{Peer-to-Peer File Transfer}
+File requests are handled over separate TCP connections[cite: 104].
+\begin{itemize}
+    \item \textbf{Binary Mode}: Files are opened using \texttt{"rb"} and \texttt{"wb"} modes to ensure data integrity[cite: 116, 120].
+    \item \textbf{Header Specification}: The serving peer sends a \texttt{Content-Length: <size>$\setminus$n} header before transferring raw bytes[cite: 114].
+    \item \textbf{Storage and Cleanup}: Partial files from failed or timed-out transfers are explicitly discarded[cite: 125, 128].
+\end{itemize}
+
+\section{Test Cases and Results}
+As required by the rubric, the following test cases were conducted:
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{@{}p{3.5cm}p{5.5cm}p{4cm}@{}}
+\toprule
+\textbf{Test Case} & \textbf{Objective} & \textbf{Outcome} \\ \midrule
+Peer Discovery & Verify tracker registers Peer 1 with \texttt{fileA.txt}. & Success \\
+File Retrieval & Peer 2 downloads \texttt{fileA.txt} from Peer 1[cite: 172]. & Success \\
+Update Logic & Peer 2 overwrites local file with a newer $mtime$ version[cite: 173]. & Success \\
+Error Handling & Verify partial file deletion on connection timeout[cite: 174]. & Success \\ \bottomrule
+\end{tabular}
+\caption{Summary of validation tests performed during development.}
+\end{table}
+
+\section{Screenshots}
+\begin{figure}[h]
+    \centering
+    % \includegraphics[width=0.7\textwidth]{tracker_log.png}
+    \caption{Tracker log showing registration of Peer 1, 2, and 3[cite: 14].}
+\end{figure}
+
+\end{document}
