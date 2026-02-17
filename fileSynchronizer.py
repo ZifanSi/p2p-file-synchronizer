@@ -121,11 +121,11 @@ class FileSynchronizer(threading.Thread):
 
         #Own port and IP address for serving file requests to other peers
         self.port = int(port) #YOUR CODE
-        self.host = int(trackerport) #YOUR CODE
+        self.host = host #YOUR CODE
 
         #Tracker IP/hostname and port
         self.trackerhost = trackerhost #YOUR CODE
-        self.trackerport = trackerport #YOUR CODE
+        self.trackerport = int(trackerport) #YOUR CODE
 
         self.BUFFER_SIZE = 8192
 
@@ -305,17 +305,68 @@ class FileSynchronizer(threading.Thread):
         file_dic -- dict with 'ip', 'port', and 'mtime'
         """
         #YOUR CODE  
-        #Step 1. connect to peer and send filename + '\n'
-        #Step 2. read header "Content-Length: <size>\n"
-        #Step 3. read exactly <size> bytes; if short, discard partial file
-        #Step 4. write file to disk (binary), rename from .part when done
-        #Step 5. set mtime using os.utime
+
+        filename = os.path.basename(filename)
+        ip = file_dic.get("ip")
+        port = int(file_dic.get("port"))
+        mtime = int(file_dic.get("mtime"))
+
+        tmp = filename + ".part"
+
+        peer = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        peer.settimeout(8)
+
         try:
+            #Step 1. connect to peer and send filename + '\n'
+            peer.connect((ip, port))
+            peer.sendall((filename + "\n").encode("utf-8"))
+
+            #Step 2. read header "Content-Length: <size>\n"
+            buf = b""
+            while b"\n" not in buf:
+                part = peer.recv(self.BUFFER_SIZE)
+                if not part:
+                    return
+                buf += part
+
+            header_line, rest = buf.split(b"\n", 1)
+            header_line = header_line.decode("utf-8").strip()
+            if not header_line.lower().startswith("content-length:"):
+                return
+
+            size = int(header_line.split(":", 1)[1].strip())
+
+            #Step 3. read exactly <size> bytes; if short, discard partial file
+            data = bytearray()
+            if rest:
+                take = min(len(rest), size)
+                data.extend(rest[:take])
+
+            while len(data) < size:
+                chunk = peer.recv(min(self.BUFFER_SIZE, size - len(data)))
+                if not chunk:
+                    break
+                data.extend(chunk)
+
+            if len(data) != size:
+                if os.path.exists(tmp):
+                    os.remove(tmp)
+                return
+
+            #Step 4. write file to disk (binary), rename from .part when done
+            with open(tmp, "wb") as f:
+                f.write(data)
+            os.replace(tmp, filename)
+
+            #Step 5. set mtime using os.utime
+            os.utime(filename, (mtime, mtime))
+
         finally:
             try:
                 peer.close()
             except Exception:
                 pass
+
 
 if __name__ == '__main__':
     parser = optparse.OptionParser(usage="%prog ServerIP ServerPort")
@@ -336,5 +387,9 @@ if __name__ == '__main__':
             # get a free port
             synchronizer_port = get_next_avaliable_port(8000)
             synchronizer_thread = FileSynchronizer(tracker_ip,tracker_port,synchronizer_port)
+
+            # start the thread
+            synchronizer_thread.start()
+            synchronizer_thread.join()
         else:
             parser.error("Invalid ServerIP or ServerPort")
