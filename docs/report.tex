@@ -90,6 +90,42 @@ Content-Length: <size>\n
 <raw file bytes>
 \end{lstlisting}
 
+\section{Selected Runtime Output Evidence}
+The following excerpts are copied from an actual run on localhost with three peers, and are referenced in the test cases below.
+
+\subsection*{Tracker (excerpt)}
+\begin{lstlisting}
+Waiting for connections on port 9000
+Client connected with 127.0.0.1:60411
+Client connected with 127.0.0.1:60412
+Client connected with 127.0.0.1:60413
+client server127.0.0.1:8000
+client server127.0.0.1:8001
+client server127.0.0.1:8002
+\end{lstlisting}
+
+\subsection*{Peer startup + directory responses (excerpt)}
+\begin{lstlisting}
+Peer2:
+Waiting for connections on port 8000
+('connect to:127.0.0.1', 9000)
+received from tracker: {"fileB.txt": {"ip": "127.0.0.1", "port": 8000, "mtime": 1771289244}}
+
+Peer1:
+Waiting for connections on port 8001
+('connect to:127.0.0.1', 9000)
+received from tracker: {"fileB.txt": {"ip": "127.0.0.1", "port": 8000, "mtime": 1771289244},
+"fileA.txt": {"ip": "127.0.0.1", "port": 8001, "mtime": 1771289241},
+"fileC.txt": {"ip": "127.0.0.1", "port": 8002, "mtime": 1771289247}}
+
+Peer3:
+Waiting for connections on port 8002
+('connect to:127.0.0.1', 9000)
+received from tracker: {"fileB.txt": {"ip": "127.0.0.1", "port": 8000, "mtime": 1771289244},
+"fileA.txt": {"ip": "127.0.0.1", "port": 8001, "mtime": 1771289241},
+"fileC.txt": {"ip": "127.0.0.1", "port": 8002, "mtime": 1771289247}}
+\end{lstlisting}
+
 \section{Test Cases and Results}
 \subsection{TC0: get\_file\_info() Filtering Rules}
 \textbf{Goal:} Verify only valid files in the local directory are included, and filtering matches the rules.
@@ -128,7 +164,12 @@ Content-Length: <size>\n
 
 \textbf{Expected:} Each peer prints \texttt{Waiting for connections on port <p>} with distinct ports.
 
-\textbf{Observed:} Peers bound successfully to ports (e.g., 8000, 8001, 8002) without errors.
+\textbf{Observed:} From runtime output:
+\begin{lstlisting}
+Peer2: Waiting for connections on port 8000
+Peer1: Waiting for connections on port 8001
+Peer3: Waiting for connections on port 8002
+\end{lstlisting}
 
 \textbf{Result:} PASS.
 
@@ -143,7 +184,18 @@ Content-Length: <size>\n
 
 \textbf{Expected:} Tracker accepts connections and peers receive a directory JSON containing A/B/C with (ip, port, mtime).
 
-\textbf{Observed:} Tracker logged 3 client connections and peers received directory responses including \texttt{fileA.txt}, \texttt{fileB.txt}, and \texttt{fileC.txt}.
+\textbf{Observed:} From tracker output:
+\begin{lstlisting}
+Client connected with 127.0.0.1:60411
+Client connected with 127.0.0.1:60412
+Client connected with 127.0.0.1:60413
+\end{lstlisting}
+And from peer output (directory contains all three files with metadata):
+\begin{lstlisting}
+received from tracker: {"fileB.txt": {"ip": "127.0.0.1", "port": 8000, "mtime": 1771289244},
+"fileA.txt": {"ip": "127.0.0.1", "port": 8001, "mtime": 1771289241},
+"fileC.txt": {"ip": "127.0.0.1", "port": 8002, "mtime": 1771289247}}
+\end{lstlisting}
 
 \textbf{Result:} PASS.
 
@@ -158,7 +210,13 @@ Content-Length: <size>\n
 
 \textbf{Expected:} Each peer downloads the missing files and ends with A/B/C.
 
-\textbf{Observed:} After running, Peer1/Peer2/Peer3 all contained \texttt{fileA.txt}, \texttt{fileB.txt}, \texttt{fileC.txt}.
+\textbf{Observed:} After running, directory listings showed each peer folder contained:
+\begin{lstlisting}
+Peer1: fileA.txt fileB.txt fileC.txt
+Peer2: fileA.txt fileB.txt fileC.txt
+Peer3: fileA.txt fileB.txt fileC.txt
+\end{lstlisting}
+Also, the repeated directory responses showing all three files remained stable across sync cycles.
 
 \textbf{Result:} PASS.
 
