@@ -1,8 +1,5 @@
 # p2p-file-synchronizer
 
-Skeleton.py
-tracker.py
-
 Output: 
 Tracker:
 Waiting for connections on port 9000

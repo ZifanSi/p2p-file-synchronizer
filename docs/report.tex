@@ -1,87 +1,241 @@
-\documentclass[12pt]{article}
-\usepackage[utf8]{inputenc}
-\usepackage{geometry}
-\geometry{letterpaper, margin=1in}
-\usepackage{graphicx}
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\usepackage{enumitem}
 \usepackage{booktabs}
 \usepackage{listings}
 \usepackage{xcolor}
-\usepackage{hyperref}
-
-% Define colors for code snippets
-\definecolor{codegreen}{rgb}{0,0.6,0}
-\definecolor{codegray}{rgb}{0.5,0.5,0.5}
-\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
 
 \lstset{
-    backgroundcolor=\color{backcolour},
-    commentstyle=\color{codegreen},
-    keywordstyle=\color{magenta},
-    numberstyle=\tiny\color{codegray},
-    basicstyle=\ttfamily\footnotesize,
-    breaklines=true,
-    showspaces=false,
-    showstringspaces=false,
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  columns=fullflexible
 }
 
-\title{Assignment 2: Peer-to-Peer File Synchronizer Report}
-\author{Student Name: \underline{\hspace{4cm}} \\ Student ID: \underline{\hspace{4cm}}}
+\title{P2P File Synchronizer --- Report (Test Cases \& Results)}
+\author{Zifan Si \quad (Student \#400265867)}
 \date{\today}
 
 \begin{document}
-
 \maketitle
 
-\section{System Overview}
-This report details the implementation of a P2P file sharing application designed to synchronize files between end hosts acting as both servers and clients[cite: 7]. The system consists of a centralized tracker for peer discovery and a direct peer-to-peer protocol for binary file transfers[cite: 34, 35].
-
-\section{Implementation of Core Functions}
-The following functions were implemented as per the grading rubrics[cite: 166, 167, 168]:
-
-\begin{itemize}
-    \item \textbf{\texttt{get\_file\_info()}}: Retrieves filenames and last modified times ($mtime$) as integers (seconds since epoch) from the working directory[cite: 68, 166].
-    \item \textbf{\texttt{get\_next\_available\_port()}}: Dynamically binds to an open TCP port for the peer's file-serving listener[cite: 167].
-    \item \textbf{Initializer}: Configures the persistent TCP connection to the tracker and initializes the dual-thread model (Peer-to-Tracker and Peer-to-Peer)[cite: 50, 168].
+\section{Overview}
+This assignment implements a peer-to-peer file synchronizer using a centralized tracker. Each peer:
+\begin{itemize}[noitemsep]
+  \item discovers peers and file metadata from the tracker,
+  \item downloads missing or newer files from other peers (by mtime),
+  \item serves file requests from peers using a simple TCP protocol with a \texttt{Content-Length} header.
 \end{itemize}
 
-\section{Protocol Adherence}
-\subsection{Peer-to-Tracker Interaction}
-The synchronizer establishes one persistent connection to the tracker[cite: 50]. 
-\begin{itemize}
-    \item \textbf{Initial Message}: Sent upon startup with the local file list[cite: 57].
-    \item \textbf{Keepalive}: Sent every 5 seconds to maintain "live" status[cite: 70].
-    \item \textbf{JSON Framing}: All messages are UTF-8 JSON objects terminated by a newline ($\setminus$n)[cite: 54].
+\section{Environment}
+\begin{itemize}[noitemsep]
+  \item OS: Windows (local testing)
+  \item Python: 3.x
+  \item Network: localhost (127.0.0.1)
 \end{itemize}
 
-\subsection{Peer-to-Peer File Transfer}
-File requests are handled over separate TCP connections[cite: 104].
-\begin{itemize}
-    \item \textbf{Binary Mode}: Files are opened using \texttt{"rb"} and \texttt{"wb"} modes to ensure data integrity[cite: 116, 120].
-    \item \textbf{Header Specification}: The serving peer sends a \texttt{Content-Length: <size>$\setminus$n} header before transferring raw bytes[cite: 114].
-    \item \textbf{Storage and Cleanup}: Partial files from failed or timed-out transfers are explicitly discarded[cite: 125, 128].
+\section{Project Layout Used for Testing}
+\begin{lstlisting}
+Project/
+  tracker.py
+  run_all.bat
+  fileSynchronizer.py
+  Peer1/
+    fileSynchronizer.py
+    fileA.txt
+  Peer2/
+    fileSynchronizer.py
+    fileB.txt
+  Peer3/
+    fileSynchronizer.py
+    fileC.txt
+\end{lstlisting}
+
+\section{How to Run}
+Tracker:
+\begin{lstlisting}
+python tracker.py 127.0.0.1 9000
+\end{lstlisting}
+
+Peers (each started from its own folder):
+\begin{lstlisting}
+cd Peer1 && python fileSynchronizer.py 127.0.0.1 9000
+cd Peer2 && python fileSynchronizer.py 127.0.0.1 9000
+cd Peer3 && python fileSynchronizer.py 127.0.0.1 9000
+\end{lstlisting}
+
+(Optional) Batch script:
+\begin{lstlisting}
+run_all.bat
+\end{lstlisting}
+
+\section{Protocol Summary}
+\subsection{Peer $\rightarrow$ Tracker}
+Messages are newline-terminated JSON.
+\begin{itemize}[noitemsep]
+  \item Init (once): \texttt{\{"port": <p>, "files": [\{"name":..., "mtime":...\}, ...]\}}
+  \item KeepAlive (periodic): \texttt{\{"port": <p>\}}
 \end{itemize}
+
+\subsection{Peer $\leftrightarrow$ Peer}
+Requester sends:
+\begin{lstlisting}
+<filename>\n
+\end{lstlisting}
+Server responds:
+\begin{lstlisting}
+Content-Length: <size>\n
+<raw file bytes>
+\end{lstlisting}
 
 \section{Test Cases and Results}
-As required by the rubric, the following test cases were conducted:
+\subsection{TC0: get\_file\_info() Filtering Rules}
+\textbf{Goal:} Verify only valid files in the local directory are included, and filtering matches the rules.
 
-\begin{table}[h!]
-\centering
-\begin{tabular}{@{}p{3.5cm}p{5.5cm}p{4cm}@{}}
+\textbf{Setup:} In \texttt{Peer1/} create:
+\begin{itemize}[noitemsep]
+  \item \texttt{fileA.txt}
+  \item \texttt{junk.dll}, \texttt{junk.so}, \texttt{temp.py}
+  \item subfolder \texttt{sub/} containing \texttt{subfile.txt}
+\end{itemize}
+
+\textbf{Steps:}
+\begin{enumerate}[noitemsep]
+  \item Start Peer1 and observe what it advertises (via tracker directory response content).
+\end{enumerate}
+
+\textbf{Expected:}
+\begin{itemize}[noitemsep]
+  \item Only \texttt{fileA.txt} is included.
+  \item No subfolder files appear.
+  \item \texttt{mtime} values are integers.
+\end{itemize}
+
+\textbf{Observed:} Only \texttt{fileA.txt} appeared in the directory listing; ignored \texttt{.py/.dll/.so} and subfolder.
+
+\textbf{Result:} PASS.
+
+\subsection{TC1: get\_next\_available\_port() / Bind Success}
+\textbf{Goal:} Verify each peer binds to an available port (no collisions).
+
+\textbf{Steps:}
+\begin{enumerate}[noitemsep]
+  \item Start tracker on \texttt{127.0.0.1:9000}.
+  \item Start Peer1, Peer2, Peer3.
+\end{enumerate}
+
+\textbf{Expected:} Each peer prints \texttt{Waiting for connections on port <p>} with distinct ports.
+
+\textbf{Observed:} Peers bound successfully to ports (e.g., 8000, 8001, 8002) without errors.
+
+\textbf{Result:} PASS.
+
+\subsection{TC2: Tracker Registration \& Directory Aggregation}
+\textbf{Goal:} Verify peers register to the tracker and the tracker directory contains all files.
+
+\textbf{Steps:}
+\begin{enumerate}[noitemsep]
+  \item Initial state: Peer1 has \texttt{fileA.txt}, Peer2 has \texttt{fileB.txt}, Peer3 has \texttt{fileC.txt}.
+  \item Start tracker and peers.
+\end{enumerate}
+
+\textbf{Expected:} Tracker accepts connections and peers receive a directory JSON containing A/B/C with (ip, port, mtime).
+
+\textbf{Observed:} Tracker logged 3 client connections and peers received directory responses including \texttt{fileA.txt}, \texttt{fileB.txt}, and \texttt{fileC.txt}.
+
+\textbf{Result:} PASS.
+
+\subsection{TC3: Missing File Download (Convergence)}
+\textbf{Goal:} Verify peers download missing files and all peers converge to the same set.
+
+\textbf{Steps:}
+\begin{enumerate}[noitemsep]
+  \item Ensure Peer1 has only \texttt{fileA.txt}, Peer2 only \texttt{fileB.txt}, Peer3 only \texttt{fileC.txt}.
+  \item Start tracker and peers; wait for 1--2 sync cycles.
+\end{enumerate}
+
+\textbf{Expected:} Each peer downloads the missing files and ends with A/B/C.
+
+\textbf{Observed:} After running, Peer1/Peer2/Peer3 all contained \texttt{fileA.txt}, \texttt{fileB.txt}, \texttt{fileC.txt}.
+
+\textbf{Result:} PASS.
+
+\subsection{TC4: Newer Version Wins (mtime Update)}
+\textbf{Goal:} Verify a newer file version propagates based on modification time.
+
+\textbf{Steps:}
+\begin{enumerate}[noitemsep]
+  \item Edit \texttt{Peer2/fileB.txt} (append a line) and save.
+  \item Wait 1--2 sync cycles.
+  \item Compare \texttt{Peer1/fileB.txt} and \texttt{Peer3/fileB.txt} content to Peer2.
+\end{enumerate}
+
+\textbf{Expected:} Peer1 and Peer3 fetch the updated \texttt{fileB.txt} and match Peer2. File \texttt{mtime} becomes the newer value.
+
+\textbf{Observed:} Updated \texttt{fileB.txt} propagated to other peers; contents matched Peer2 after synchronization.
+
+\textbf{Result:} PASS.
+
+\subsection{TC5: Peer Serving Protocol (Content-Length Correctness)}
+\textbf{Goal:} Verify file transfers use the correct \texttt{Content-Length} and exact bytes.
+
+\textbf{Steps:}
+\begin{enumerate}[noitemsep]
+  \item Delete \texttt{Peer1/fileC.txt}.
+  \item Wait for sync so Peer1 fetches \texttt{fileC.txt} from Peer3.
+  \item Verify the downloaded file size matches the source and the content is identical.
+\end{enumerate}
+
+\textbf{Expected:} Peer1 receives \texttt{Content-Length: <size>} and writes exactly that many bytes.
+
+\textbf{Observed:} Downloaded \texttt{fileC.txt} matched the source content and size.
+
+\textbf{Result:} PASS.
+
+\subsection{TC6: Failure Handling (Peer Down / Discard Partial)}
+\textbf{Goal:} Verify that failed downloads do not leave partial files and synchronization continues.
+
+\textbf{Steps:}
+\begin{enumerate}[noitemsep]
+  \item Start tracker and all peers; confirm all have A/B/C.
+  \item Stop Peer3 process (simulate a peer crash).
+  \item Delete \texttt{Peer1/fileC.txt}.
+  \item Wait 1--2 sync cycles.
+  \item Check Peer1 directory for any leftover \texttt{fileC.txt.part}.
+  \item Restart Peer3 and wait for sync again.
+\end{enumerate}
+
+\textbf{Expected:}
+\begin{itemize}[noitemsep]
+  \item When Peer3 is down, Peer1 cannot download \texttt{fileC.txt}.
+  \item No partial file (\texttt{.part}) remains after a failed transfer.
+  \item After Peer3 restarts, Peer1 successfully downloads \texttt{fileC.txt}.
+\end{itemize}
+
+\textbf{Observed:} With Peer3 stopped, \texttt{fileC.txt} was not retrieved and no \texttt{.part} file remained. After restarting Peer3, Peer1 downloaded \texttt{fileC.txt} successfully.
+
+\textbf{Result:} PASS.
+
+\section{Results Summary}
+\begin{center}
+\begin{tabular}{ll}
 \toprule
-\textbf{Test Case} & \textbf{Objective} & \textbf{Outcome} \\ \midrule
-Peer Discovery & Verify tracker registers Peer 1 with \texttt{fileA.txt}. & Success \\
-File Retrieval & Peer 2 downloads \texttt{fileA.txt} from Peer 1[cite: 172]. & Success \\
-Update Logic & Peer 2 overwrites local file with a newer $mtime$ version[cite: 173]. & Success \\
-Error Handling & Verify partial file deletion on connection timeout[cite: 174]. & Success \\ \bottomrule
+Test Case & Result \\
+\midrule
+TC0: get\_file\_info() filtering & PASS \\
+TC1: port selection / bind & PASS \\
+TC2: tracker registration + directory & PASS \\
+TC3: missing file download & PASS \\
+TC4: mtime update propagation & PASS \\
+TC5: Content-Length correctness & PASS \\
+TC6: failure handling / discard partial & PASS \\
+\bottomrule
 \end{tabular}
-\caption{Summary of validation tests performed during development.}
-\end{table}
+\end{center}
 
-\section{Screenshots}
-\begin{figure}[h]
-    \centering
-    % \includegraphics[width=0.7\textwidth]{tracker_log.png}
-    \caption{Tracker log showing registration of Peer 1, 2, and 3[cite: 14].}
-\end{figure}
+\section{Conclusion}
+The implementation was validated with tests covering file filtering, port selection, tracker interaction, peer file serving, synchronization convergence, update propagation by mtime, and basic failure handling.
 
 \end{document}
