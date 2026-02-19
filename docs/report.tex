@@ -6,6 +6,7 @@
 \usepackage{booktabs}
 \usepackage{listings}
 \usepackage{xcolor}
+\usepackage{hyperref}
 
 \lstset{
   basicstyle=\ttfamily\small,
@@ -18,8 +19,11 @@
 \author{Zifan Si \quad (Student \#400265867)}
 \date{\today}
 
+
 \begin{document}
 \maketitle
+
+\noindent GitHub link for this project: \url{https://github.com/ZifanSi/p2p-file-synchronizer}
 
 \section{Overview}
 This project implements a peer-to-peer (P2P) file synchronizer using a centralized tracker for peer discovery and directory aggregation. Each peer:
@@ -35,7 +39,7 @@ This project implements a peer-to-peer (P2P) file synchronizer using a centraliz
 \section{Environment}
 \begin{itemize}[noitemsep]
   \item OS: Windows (local testing)
-  \item Python: 3.x
+  \item Python: 3.12.10
   \item Network: localhost (127.0.0.1)
 \end{itemize}
 
