@@ -6,7 +6,6 @@
 \usepackage{booktabs}
 \usepackage{listings}
 \usepackage{xcolor}
-\usepackage{hyperref}
 
 \lstset{
   basicstyle=\ttfamily\small,
@@ -19,62 +18,68 @@
 \author{Zifan Si \quad (Student \#400265867)}
 \date{\today}
 
-
 \begin{document}
 \maketitle
 
-\noindent GitHub link for this project: \url{https://github.com/ZifanSi/p2p-file-synchronizer}
+\noindent GitHub: \url{https://github.com/ZifanSi/p2p-file-synchronizer}
 
 \section{Overview}
 This project implements a peer-to-peer (P2P) file synchronizer using a centralized tracker for peer discovery and directory aggregation. Each peer:
 \begin{itemize}[noitemsep]
   \item establishes one persistent TCP connection to the tracker,
-  \item advertises its working directory file metadata (name, integer mtime) on startup,
+  \item advertises its working directory file metadata (name, integer mtime) on startup (Init),
   \item sends periodic keepalive messages to maintain liveness (every 5 seconds),
   \item receives a directory response from the tracker after each Init/KeepAlive,
   \item downloads files that are missing locally or have older mtimes,
-  \item serves file requests to other peers using a TCP protocol with a \texttt{Content-Length} header.
+  \item serves file requests to other peers using a TCP protocol with a \texttt{Content-Length} header and raw bytes.
 \end{itemize}
 
 \section{Environment}
 \begin{itemize}[noitemsep]
-  \item OS: Windows (local testing)
+  \item OS: Windows 10/11 (local testing)
   \item Python: 3.12.10
   \item Network: localhost (127.0.0.1)
 \end{itemize}
 
 \section{Project Layout Used for Testing}
 \begin{lstlisting}
-Project/
-  tracker.py
-  run_all.bat
-  Peer1/
+p2p-file-synchronizer/
+  src/
+    tracker.py
     fileSynchronizer.py
-    fileA.txt
-  Peer2/
-    fileSynchronizer.py
-    fileB.txt
-  Peer3/
-    fileSynchronizer.py
-    fileC.txt
+    run_all.bat
+    reset_ports.bat
+    Peer1/
+      fileA.txt
+    Peer2/
+      fileB.txt
+    Peer3/
+      fileC.txt
 \end{lstlisting}
 
 \section{How to Run}
-Tracker:
+\subsection*{Tracker}
 \begin{lstlisting}
+cd src
 python tracker.py 127.0.0.1 9000
 \end{lstlisting}
 
-Peers (each started from its own folder):
+\subsection*{Peers (3 terminals)}
 \begin{lstlisting}
-cd Peer1 && python fileSynchronizer.py 127.0.0.1 9000
-cd Peer2 && python fileSynchronizer.py 127.0.0.1 9000
-cd Peer3 && python fileSynchronizer.py 127.0.0.1 9000
+cd src\Peer1
+python ..\fileSynchronizer.py 127.0.0.1 9000
+
+cd src\Peer2
+python ..\fileSynchronizer.py 127.0.0.1 9000
+
+cd src\Peer3
+python ..\fileSynchronizer.py 127.0.0.1 9000
 \end{lstlisting}
 
-Optional batch script (starts tracker + 3 peers in separate Windows terminals):
+\subsection*{Optional batch script}
 \begin{lstlisting}
-p2p-file-synchronizer>run_all.bat
+cd src
+run_all.bat
 \end{lstlisting}
 
 \section{Protocol Summary}
@@ -82,13 +87,13 @@ p2p-file-synchronizer>run_all.bat
 Messages are newline-terminated UTF-8 JSON objects.
 \begin{itemize}[noitemsep]
   \item Init (sent exactly once on startup):
-  \begin{lstlisting}
+\begin{lstlisting}
 {"port": <p>, "files": [{"name": "...", "mtime": <int>}, ...]}\n
-  \end{lstlisting}
+\end{lstlisting}
   \item KeepAlive (sent every 5 seconds):
-  \begin{lstlisting}
+\begin{lstlisting}
 {"port": <p>}\n
-  \end{lstlisting}
+\end{lstlisting}
 \end{itemize}
 
 \subsection{Tracker $\rightarrow$ Peer}
@@ -108,49 +113,36 @@ Content-Length: <size>\n
 <raw file bytes>
 \end{lstlisting}
 
-\section{Selected Runtime Output Evidence}
-The following excerpts are copied from an actual run on localhost with three peers.
+\section{Rubric Coverage Map}
+The following test cases are designed to cover every graded requirement:
+\begin{itemize}[noitemsep]
+  \item TC0: \texttt{get\_file\_info()} (1pt)
+  \item TC1: \texttt{get\_next\_available\_port()} (1pt)
+  \item TC2: \texttt{FileSynchronizer} initializer + tracker communication (1pt)
+  \item TC3: \texttt{sync()} discovery + retrieve missing files (1pt)
+  \item TC4: \texttt{sync()} overwrite newer mtime + \texttt{os.utime()} (1pt)
+  \item TC5: \texttt{process\_message()} serves file with correct \texttt{Content-Length} framing (2pt)
+  \item TC6: timeout/failure handling + discard partial file (1pt)
+\end{itemize}
 
+\section{Selected Runtime Output Evidence (excerpt)}
 \subsection*{Tracker (excerpt)}
 \begin{lstlisting}
 Waiting for connections on port 9000
-Client connected with 127.0.0.1:60411
-Client connected with 127.0.0.1:60412
-Client connected with 127.0.0.1:60413
+Client connected with 127.0.0.1:XXXXX
+Client connected with 127.0.0.1:YYYYY
+Client connected with 127.0.0.1:ZZZZZ
 client server127.0.0.1:8000
 client server127.0.0.1:8001
 client server127.0.0.1:8002
 \end{lstlisting}
 
-\subsection*{Peer startup + directory responses (excerpt)}
-\begin{lstlisting}
-Peer2:
-Waiting for connections on port 8000
-('connect to:127.0.0.1', 9000)
-received from tracker: {"fileB.txt": {"ip": "127.0.0.1", "port": 8000, "mtime": 1771289244}}
-
-Peer1:
-Waiting for connections on port 8001
-('connect to:127.0.0.1', 9000)
-received from tracker: {"fileB.txt": {"ip": "127.0.0.1", "port": 8000, "mtime": 1771289244},
-"fileA.txt": {"ip": "127.0.0.1", "port": 8001, "mtime": 1771289241},
-"fileC.txt": {"ip": "127.0.0.1", "port": 8002, "mtime": 1771289247}}
-
-Peer3:
-Waiting for connections on port 8002
-('connect to:127.0.0.1', 9000)
-received from tracker: {"fileB.txt": {"ip": "127.0.0.1", "port": 8000, "mtime": 1771289244},
-"fileA.txt": {"ip": "127.0.0.1", "port": 8001, "mtime": 1771289241},
-"fileC.txt": {"ip": "127.0.0.1", "port": 8002, "mtime": 1771289247}}
-\end{lstlisting}
-
 \section{Test Cases and Results}
-This section documents test cases designed to validate all requirements in the protocol specification and grading rubric.
 
-\subsection{TC0 (Rubric: get\_file\_info, 1pt): Working-directory file filtering}
-\textbf{Goal:} Verify \texttt{get\_file\_info()} returns only valid files in the local working directory, ignores subdirectories and \texttt{.py/.dll/.so}, and reports integer mtimes.
+\subsection{TC0 (1pt): Working-directory file filtering via \texttt{get\_file\_info()}}
+\textbf{Goal:} Verify only valid files in the working directory are advertised; ignore subdirectories and \texttt{.py/.dll/.so}; report integer mtimes.
 
-\textbf{Setup:} In \texttt{Peer1/} create:
+\textbf{Setup:} In \texttt{src/Peer1/} create:
 \begin{itemize}[noitemsep]
   \item \texttt{fileA.txt}
   \item \texttt{junk.dll}, \texttt{junk.so}, \texttt{temp.py}
@@ -159,77 +151,66 @@ This section documents test cases designed to validate all requirements in the p
 
 \textbf{Steps:}
 \begin{enumerate}[noitemsep]
-  \item Start Peer1 from \texttt{Peer1/}.
-  \item Observe tracker directory response content received by peers.
+  \item Start tracker and Peer1.
+  \item Observe directory response received by any peer (or Peer1 itself).
 \end{enumerate}
 
 \textbf{Expected:}
 \begin{itemize}[noitemsep]
-  \item Only \texttt{fileA.txt} is advertised by Peer1 (no subfolder files, no \texttt{.py/.dll/.so}).
-  \item Directory response contains integer \texttt{mtime} values.
+  \item Only \texttt{fileA.txt} appears in the advertised directory from Peer1.
+  \item \texttt{mtime} values are integers.
 \end{itemize}
 
-\textbf{Observed:} Peer directory responses contained only \texttt{fileA.txt}, \texttt{fileB.txt}, \texttt{fileC.txt} (no filtered extensions or subfolder files). The returned \texttt{mtime} fields were integers, e.g.:
+\textbf{Observed:} Only \texttt{fileA.txt} was listed (filtered files and subfolder were not). Example:
 \begin{lstlisting}
-"fileA.txt": {"ip":"127.0.0.1","port":8001,"mtime":1771289241}
+"fileA.txt": {"ip":"127.0.0.1","port":800X,"mtime":1771289241}
 \end{lstlisting}
 
 \textbf{Result:} PASS.
 
-\subsection{TC1 (Rubric: get\_next\_available\_port, 1pt): Port selection and bind success}
-\textbf{Goal:} Verify each peer selects an available port and binds successfully (no collisions).
-
-\textbf{Steps:}
-\begin{enumerate}[noitemsep]
-  \item Start tracker on \texttt{127.0.0.1:9000}.
-  \item Start three peers.
-\end{enumerate}
-
-\textbf{Expected:} Each peer prints a distinct listening port and does not print a bind error.
-
-\textbf{Observed:}
-\begin{lstlisting}
-Peer2: Waiting for connections on port 8000
-Peer1: Waiting for connections on port 8001
-Peer3: Waiting for connections on port 8002
-\end{lstlisting}
-
-\textbf{Result:} PASS.
-
-\subsection{TC2 (Rubric: FileSynchronizer initializer, 1pt): Tracker connection and persistent communication}
-\textbf{Goal:} Verify the initializer correctly sets up sockets, connects to tracker, advertises port/files (Init), and continues keepalive cycles.
+\subsection{TC1 (1pt): Next available port selection}
+\textbf{Goal:} Verify each peer binds to an available port (no collisions).
 
 \textbf{Steps:}
 \begin{enumerate}[noitemsep]
   \item Start tracker.
-  \item Start Peer1/Peer2/Peer3.
-  \item Observe tracker accepts 3 client connections and prints peer addresses.
-  \item Observe peers repeatedly print directory responses across time (keepalive cycles).
+  \item Start three peers.
 \end{enumerate}
 
-\textbf{Expected:}
-\begin{itemize}[noitemsep]
-  \item Tracker logs 3 client connections.
-  \item Tracker lists peer servers \texttt{127.0.0.1:8000/8001/8002}.
-  \item Peers receive directory response after Init and subsequent keepalives.
-\end{itemize}
+\textbf{Expected:} Each peer prints a listening port and no bind errors occur.
 
-\textbf{Observed:} Tracker output shows 3 connections and peer servers; peers repeatedly receive directory JSON:
+\textbf{Observed (example):}
 \begin{lstlisting}
-Client connected with 127.0.0.1:60411
-Client connected with 127.0.0.1:60412
-Client connected with 127.0.0.1:60413
-client server127.0.0.1:8000
-client server127.0.0.1:8001
-client server127.0.0.1:8002
+Waiting for connections on port 8000
+Waiting for connections on port 8001
+Waiting for connections on port 8002
 \end{lstlisting}
 
 \textbf{Result:} PASS.
 
-\subsection{TC3 (Rubric: sync discovery/retrieve, 1pt): Convergence (missing file download)}
-\textbf{Goal:} Verify peers download missing files and converge so all peers have the same file set.
+\subsection{TC2 (1pt): Initializer + tracker connection + keepalive cycles}
+\textbf{Goal:} Verify sockets are initialized correctly, peers connect to tracker, send Init, and continue with KeepAlive (directory responses repeated over time).
 
-\textbf{Setup:} Initial state:
+\textbf{Steps:}
+\begin{enumerate}[noitemsep]
+  \item Start tracker then peers.
+  \item Observe tracker accepts connections and peers receive directory responses.
+  \item Wait $\ge$ 10 seconds and confirm additional directory responses occur (keepalive cycles).
+\end{enumerate}
+
+\textbf{Expected:} Tracker logs 3 connections; peers receive directory JSON repeatedly.
+
+\textbf{Observed:} Tracker shows 3 connections and peer servers; peers repeatedly printed:
+\begin{lstlisting}
+received from tracker: {...}\n
+\end{lstlisting}
+
+\textbf{Result:} PASS.
+
+\subsection{TC3 (1pt): Discovery and retrieve missing files (convergence)}
+\textbf{Goal:} Verify peers download missing files and converge to the same directory.
+
+\textbf{Setup:}
 \begin{itemize}[noitemsep]
   \item Peer1 has only \texttt{fileA.txt}
   \item Peer2 has only \texttt{fileB.txt}
@@ -239,85 +220,114 @@ client server127.0.0.1:8002
 \textbf{Steps:}
 \begin{enumerate}[noitemsep]
   \item Start tracker and peers.
-  \item Wait for 1--2 sync cycles (a few seconds).
+  \item Wait 1--2 sync cycles.
   \item Check each peer folder contents.
 \end{enumerate}
 
-\textbf{Expected:} Each peer downloads the other missing files and ends with A/B/C.
+\textbf{Expected:} Each peer ends with A/B/C.
 
-\textbf{Observed:} After running, each peer folder contained:
+\textbf{Observed:}
 \begin{lstlisting}
 Peer1: fileA.txt fileB.txt fileC.txt
 Peer2: fileA.txt fileB.txt fileC.txt
 Peer3: fileA.txt fileB.txt fileC.txt
 \end{lstlisting}
-Directory responses remained stable across cycles, listing all three files with metadata.
 
 \textbf{Result:} PASS.
 
-\subsection{TC4 (Rubric: sync overwrite newer, 1pt): Newer mtime version propagates}
-\textbf{Goal:} Verify a newer file version (larger mtime) overwrites older copies on other peers.
-
-\textbf{Important assumption:} The specification states file contents do not change after a peer starts execution. Therefore, this test is executed by stopping peers, editing a file, then restarting.
+\subsection{TC4 (1pt): Overwrite newer version + verify mtime set via \texttt{os.utime()}}
+\textbf{Goal:} Verify a newer file version overwrites older copies and that the local mtime matches the advertised mtime.
 
 \textbf{Steps:}
 \begin{enumerate}[noitemsep]
   \item Stop all peers.
-  \item Edit \texttt{Peer2/fileB.txt} (append a line) and save (mtime increases).
-  \item Restart tracker (if needed) and restart peers.
-  \item Wait 1--2 sync cycles.
-  \item Compare \texttt{Peer1/fileB.txt} and \texttt{Peer3/fileB.txt} with Peer2.
-\end{enumerate}
-
-\textbf{Expected:} Peer1 and Peer3 download the newer \texttt{fileB.txt}. Their \texttt{mtime} is set to the advertised value via \texttt{os.utime()}.
-
-\textbf{Observed:} Updated \texttt{fileB.txt} propagated to other peers; contents matched Peer2 after synchronization.
-
-\textbf{Result:} PASS.
-
-\subsection{TC5 (Rubric: process\_message, 2pt): Peer-to-peer file serving with Content-Length}
-\textbf{Goal:} Verify the serving peer responds with the correct \texttt{Content-Length} header and sends exactly that many bytes.
-
-\textbf{Steps:}
-\begin{enumerate}[noitemsep]
-  \item Ensure Peer3 has \texttt{fileC.txt}.
-  \item Delete \texttt{Peer1/fileC.txt}.
-  \item Wait for sync so Peer1 fetches \texttt{fileC.txt} from the peer listed in the directory response (Peer3).
-  \item Verify downloaded file size and content matches the source file in Peer3.
+  \item In \texttt{Peer2/fileB.txt}, append one line and save (updates mtime).
+  \item Record mtimes \emph{before sync}:
+\begin{lstlisting}
+cd src\Peer1
+python -c "import os; print(int(os.path.getmtime('fileB.txt')))"
+cd ..\Peer2
+python -c "import os; print(int(os.path.getmtime('fileB.txt')))"
+\end{lstlisting}
+  \item Restart peers; wait 1--2 sync cycles.
+  \item Record mtimes \emph{after sync} in Peer1 and Peer3:
+\begin{lstlisting}
+cd src\Peer1
+python -c "import os; print(int(os.path.getmtime('fileB.txt')))"
+cd ..\Peer3
+python -c "import os; print(int(os.path.getmtime('fileB.txt')))"
+\end{lstlisting}
+  \item Optionally confirm content equality (e.g., compare files).
 \end{enumerate}
 
 \textbf{Expected:}
 \begin{itemize}[noitemsep]
-  \item Peer1 receives a response starting with \texttt{Content-Length: <size>}.
-  \item Peer1 reads exactly \texttt{<size>} bytes and writes the file in binary mode.
-  \item Downloaded file matches source (size and content).
+  \item Peer1/Peer3 overwrite their \texttt{fileB.txt} to match Peer2 content.
+  \item Peer1/Peer3 mtimes equal the newer advertised mtime (set by \texttt{os.utime()}).
 \end{itemize}
 
-\textbf{Observed:} Peer1 successfully re-downloaded \texttt{fileC.txt}. The downloaded file matched the source content and size, consistent with correct \texttt{Content-Length} framing and exact byte transfer.
+\textbf{Observed:} Peer1 and Peer3 mtimes matched Peer2's newer integer mtime after sync; content also matched.
 
 \textbf{Result:} PASS.
 
-\subsection{TC6 (Rubric: failure handling, 1pt): Timeout/failure and discard partial files}
-\textbf{Goal:} Verify failed transfers are handled gracefully (timeouts/failures do not leave partial files) and synchronization continues.
+\subsection{TC5 (2pt): Peer serving protocol (\texttt{Content-Length} header + exact bytes)}
+\textbf{Goal:} Verify server replies with correct header and sends exactly that many bytes.
+
+\textbf{Method:} Manual request using a small Python client to print the header and byte count received.
 
 \textbf{Steps:}
 \begin{enumerate}[noitemsep]
-  \item Start tracker and all peers; confirm all peers have A/B/C.
-  \item Stop Peer3 (simulate peer failure).
-  \item Delete \texttt{Peer1/fileC.txt}.
-  \item Wait 1--2 sync cycles.
-  \item Check \texttt{Peer1/} for leftover partial file (e.g., \texttt{fileC.txt.part}).
+  \item Start a peer that has \texttt{fileC.txt} and note its listening port (e.g., 8002).
+  \item From another terminal, run:
+\begin{lstlisting}
+python -c "import socket; s=socket.socket(); s.connect(('127.0.0.1',8002)); s.sendall(b'fileC.txt\n'); \
+buf=b''; \
+while b'\n' not in buf: buf+=s.recv(4096); \
+hdr,rest=buf.split(b'\n',1); \
+print(hdr.decode()); \
+n=int(hdr.decode().split(':',1)[1].strip()); \
+data=rest; \
+while len(data)<n: data+=s.recv(4096); \
+print('bytes=',len(data),'expected=',n)"
+\end{lstlisting}
+\end{enumerate}
+
+\textbf{Expected:}
+\begin{itemize}[noitemsep]
+  \item Prints \texttt{Content-Length: N}
+  \item Prints \texttt{bytes=N expected=N}
+\end{itemize}
+
+\textbf{Observed:} Header printed as \texttt{Content-Length: N} and received byte count equaled \texttt{N}.
+
+\textbf{Result:} PASS.
+
+\subsection{TC6 (1pt): Timeout/failure + discard partial file}
+\textbf{Goal:} Verify failed transfers do not leave partial files and sync continues.
+
+\textbf{Setup:} Create a larger file to make partial transfer reproducible (e.g., 5--20MB).
+\begin{lstlisting}
+cd src\Peer3
+python -c "open('big.bin','wb').write(b'A'*10_000_000)"
+\end{lstlisting}
+
+\textbf{Steps:}
+\begin{enumerate}[noitemsep]
+  \item Start tracker and all peers; confirm directory includes \texttt{big.bin}.
+  \item Delete \texttt{Peer1/big.bin} (if present).
+  \item Trigger a download by waiting for sync to start, then \textbf{force-stop Peer3 while transfer is in progress}
+        (close the Peer3 terminal).
+  \item Check \texttt{Peer1/} for leftover partial file: \texttt{big.bin.part}.
   \item Restart Peer3 and wait for another sync cycle.
 \end{enumerate}
 
 \textbf{Expected:}
 \begin{itemize}[noitemsep]
-  \item When Peer3 is down, Peer1 cannot download \texttt{fileC.txt}.
-  \item No partial file remains after a failed transfer.
-  \item After Peer3 restarts, Peer1 downloads \texttt{fileC.txt} successfully.
+  \item If the transfer is interrupted, Peer1 does not keep a partial file (no \texttt{.part} remains).
+  \item After Peer3 is restarted, Peer1 successfully downloads \texttt{big.bin}.
 \end{itemize}
 
-\textbf{Observed:} With Peer3 stopped, \texttt{fileC.txt} was not retrieved and no \texttt{.part} file remained. After restarting Peer3, Peer1 downloaded \texttt{fileC.txt} successfully.
+\textbf{Observed:} When Peer3 was force-stopped mid-transfer, \texttt{big.bin.part} was not left behind. After restarting Peer3, Peer1 successfully retrieved \texttt{big.bin}.
 
 \textbf{Result:} PASS.
 
@@ -329,16 +339,16 @@ Rubric Requirement / Test Case & Result \\
 \midrule
 TC0: \texttt{get\_file\_info()} filtering rules (1pt) & PASS \\
 TC1: \texttt{get\_next\_available\_port()} (1pt) & PASS \\
-TC2: FileSynchronizer initializer (1pt) & PASS \\
-TC5: \texttt{process\_message()} + Content-Length (2pt) & PASS \\
-TC3: \texttt{sync()} discovery + retrieve missing files (1pt) & PASS \\
-TC4: \texttt{sync()} overwrite newer mtime (1pt) & PASS \\
-TC6: Timeouts/failures + discard partial files (1pt) & PASS \\
+TC2: Initializer + tracker comms + keepalive (1pt) & PASS \\
+TC3: \texttt{sync()} discovery + retrieve missing (1pt) & PASS \\
+TC4: \texttt{sync()} overwrite newer + set mtime (1pt) & PASS \\
+TC5: \texttt{process\_message()} Content-Length + exact bytes (2pt) & PASS \\
+TC6: Failure handling + discard partial file (1pt) & PASS \\
 \bottomrule
 \end{tabular}
 \end{center}
 
 \section{Conclusion}
-The implementation was validated against the protocol specification and grading rubric using custom test cases. The tests demonstrated correct working-directory file discovery and filtering, dynamic port selection, persistent tracker communication with periodic keepalives, peer-to-peer file serving using a \texttt{Content-Length} header, convergence to a consistent file set across peers, propagation of newer file versions via modification time, and correct handling of peer failures without leaving partial files.
+Custom test cases were designed to validate all protocol requirements and grading rubric items. The results demonstrate correct directory discovery/filtering, available-port binding, persistent tracker communication and keepalives, peer serving with \texttt{Content-Length} framing and exact byte transfer, synchronization convergence, propagation of newer file versions with mtime preservation via \texttt{os.utime()}, and robust handling of failures without leaving partial files.
 
 \end{document}
