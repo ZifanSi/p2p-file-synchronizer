@@ -1,6 +1,8 @@
 # p2p-file-synchronizer
-
-run_all.bat
+cd C:\Users\sifra\Desktop\p2p-file-synchronizer
+src\bats\clean_peers.bat
+src\bats\clean_port.bat
+src\run_all.bat
 
 Before
 Peer 1: file A

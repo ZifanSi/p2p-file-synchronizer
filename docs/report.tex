@@ -43,18 +43,31 @@ This project implements a peer-to-peer (P2P) file synchronizer using a centraliz
 
 \section{Project Layout Used for Testing}
 \begin{lstlisting}
-p2p-file-synchronizer/
-  src/
-    tracker.py
-    fileSynchronizer.py
-    run_all.bat
-    reset_ports.bat
-    Peer1/
-      fileA.txt
-    Peer2/
-      fileB.txt
-    Peer3/
-      fileC.txt
+src\bats
+src\bats\clean_peer.bat
+src\bats\clean_port.bat
+src\Peer1
+src\Peer1\fileA.txt
+src\Peer1\fileB.txt
+src\Peer1\fileC.txt
+src\Peer2
+src\Peer2\fileA.txt
+src\Peer2\fileB.txt
+src\Peer2\fileC.txt
+src\Peer3
+src\Peer3\big.bin
+src\Peer3\fileA.txt
+src\Peer3\fileB.txt
+src\Peer3\fileC.txt
+src\tests
+src\tests\compare_files.py
+src\tests\tc_4.py
+src\tests\tc_5.py
+src\tests\tc_6.py
+src\big.bin
+src\fileSynchronizer.py
+src\run_all.bat
+src\tracker.py
 \end{lstlisting}
 
 \section{How to Run}
