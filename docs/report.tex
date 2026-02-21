@@ -27,7 +27,7 @@
 This project implements a peer-to-peer (P2P) file synchronizer using a centralized tracker for peer discovery and directory aggregation. Each peer:
 \begin{itemize}[noitemsep]
   \item establishes one persistent TCP connection to the tracker,
-  \item advertises its working directory file metadata (name, integer mtime) on startup (Init),
+  \item advertises working-directory file metadata (name, integer mtime) on startup (Init),
   \item sends periodic keepalive messages to maintain liveness (every 5 seconds),
   \item receives a directory response from the tracker after each Init/KeepAlive,
   \item downloads files that are missing locally or have older mtimes,
@@ -43,57 +43,44 @@ This project implements a peer-to-peer (P2P) file synchronizer using a centraliz
 
 \section{Project Layout Used for Testing}
 \begin{lstlisting}
-src\bats
-src\bats\clean_peer.bat
-src\bats\clean_port.bat
-src\Peer1
-src\Peer1\fileA.txt
-src\Peer1\fileB.txt
-src\Peer1\fileC.txt
-src\Peer2
-src\Peer2\fileA.txt
-src\Peer2\fileB.txt
-src\Peer2\fileC.txt
-src\Peer3
-src\Peer3\big.bin
-src\Peer3\fileA.txt
-src\Peer3\fileB.txt
-src\Peer3\fileC.txt
-src\tests
-src\tests\compare_files.py
-src\tests\tc_4.py
-src\tests\tc_5.py
-src\tests\tc_6.py
-src\big.bin
-src\fileSynchronizer.py
-src\run_all.bat
-src\tracker.py
+src/
+  bats/
+    clean_peer.bat
+    clean_port.bat
+  Peer1/
+    fileA.txt
+  Peer2/
+    fileB.txt
+  Peer3/
+    fileC.txt
+    (generated in TC6) big.bin
+  tests/
+    compare_files.py
+    tc_4.py
+    tc_5.py
+    tc_6.py
+  fileSynchronizer.py
+  run_all.bat
+  tracker.py
 \end{lstlisting}
 
 \section{How to Run}
-\subsection*{Tracker}
+\subsection*{Optional reset scripts}
+Stop all python listeners on known ports:
 \begin{lstlisting}
-cd src
-python tracker.py 127.0.0.1 9000
+src\bats\clean_port.bat
+\end{lstlisting}
+Reset peer folders to a known starting state (for repeatable tests):
+\begin{lstlisting}
+src\bats\clean_peer.bat
 \end{lstlisting}
 
-\subsection*{Peers (3 terminals)}
-\begin{lstlisting}
-cd src\Peer1
-python ..\fileSynchronizer.py 127.0.0.1 9000
-
-cd src\Peer2
-python ..\fileSynchronizer.py 127.0.0.1 9000
-
-cd src\Peer3
-python ..\fileSynchronizer.py 127.0.0.1 9000
-\end{lstlisting}
-
-\subsection*{Optional batch script}
+\subsection*{Tracker + Peers}
 \begin{lstlisting}
 cd src
 run_all.bat
 \end{lstlisting}
+(Alternatively, start tracker and each peer in separate terminals.)
 
 \section{Protocol Summary}
 \subsection{Peer $\rightarrow$ Tracker}
@@ -232,6 +219,7 @@ received from tracker: {...}\n
 
 \textbf{Steps:}
 \begin{enumerate}[noitemsep]
+  \item Run \texttt{src\textbackslash{}bats\textbackslash{}clean\_peer.bat} to reset state.
   \item Start tracker and peers.
   \item Wait 1--2 sync cycles.
   \item Check each peer folder contents.
@@ -253,55 +241,44 @@ Peer3: fileA.txt fileB.txt fileC.txt
 
 \textbf{Steps:}
 \begin{enumerate}[noitemsep]
-  \item Stop all peers.
-  \item In \texttt{Peer2/fileB.txt}, append one line and save (updates mtime).
-  \item Record mtimes \emph{before sync}:
+  \item Stop all peers (or run \texttt{src\textbackslash{}bats\textbackslash{}clean\_port.bat}).
+  \item Append one line to \texttt{src/Peer2/fileB.txt} and save (mtime increases).
+  \item Restart tracker and peers.
+  \item Record mtimes using the provided helper script:
 \begin{lstlisting}
-cd src\Peer1
-python -c "import os; print(int(os.path.getmtime('fileB.txt')))"
-cd ..\Peer2
-python -c "import os; print(int(os.path.getmtime('fileB.txt')))"
+cd src
+python tests\tc_4.py Peer2\fileB.txt
+python tests\tc_4.py Peer1\fileB.txt
+python tests\tc_4.py Peer3\fileB.txt
 \end{lstlisting}
-  \item Restart peers; wait 1--2 sync cycles.
-  \item Record mtimes \emph{after sync} in Peer1 and Peer3:
+  \item Confirm content equality using:
 \begin{lstlisting}
-cd src\Peer1
-python -c "import os; print(int(os.path.getmtime('fileB.txt')))"
-cd ..\Peer3
-python -c "import os; print(int(os.path.getmtime('fileB.txt')))"
+cd src
+python tests\compare_files.py Peer2\fileB.txt Peer1\fileB.txt
+python tests\compare_files.py Peer2\fileB.txt Peer3\fileB.txt
 \end{lstlisting}
-  \item Optionally confirm content equality (e.g., compare files).
 \end{enumerate}
 
 \textbf{Expected:}
 \begin{itemize}[noitemsep]
-  \item Peer1/Peer3 overwrite their \texttt{fileB.txt} to match Peer2 content.
-  \item Peer1/Peer3 mtimes equal the newer advertised mtime (set by \texttt{os.utime()}).
+  \item Peer1/Peer3 overwrite their \texttt{fileB.txt} to match Peer2.
+  \item Peer1/Peer3 integer mtimes equal Peer2's newer mtime (set by \texttt{os.utime()}).
 \end{itemize}
 
-\textbf{Observed:} Peer1 and Peer3 mtimes matched Peer2's newer integer mtime after sync; content also matched.
+\textbf{Observed:} After restart and synchronization, Peer1 and Peer3 matched Peer2's updated file (same hash via \texttt{compare\_files.py}) and mtimes (via \texttt{tc\_4.py}).
 
 \textbf{Result:} PASS.
 
 \subsection{TC5 (2pt): Peer serving protocol (\texttt{Content-Length} header + exact bytes)}
 \textbf{Goal:} Verify server replies with correct header and sends exactly that many bytes.
 
-\textbf{Method:} Manual request using a small Python client to print the header and byte count received.
-
 \textbf{Steps:}
 \begin{enumerate}[noitemsep]
-  \item Start a peer that has \texttt{fileC.txt} and note its listening port (e.g., 8002).
-  \item From another terminal, run:
+  \item Start peers and identify the serving peer port for \texttt{fileC.txt} (Peer3 in this run used port 8002).
+  \item Run:
 \begin{lstlisting}
-python -c "import socket; s=socket.socket(); s.connect(('127.0.0.1',8002)); s.sendall(b'fileC.txt\n'); \
-buf=b''; \
-while b'\n' not in buf: buf+=s.recv(4096); \
-hdr,rest=buf.split(b'\n',1); \
-print(hdr.decode()); \
-n=int(hdr.decode().split(':',1)[1].strip()); \
-data=rest; \
-while len(data)<n: data+=s.recv(4096); \
-print('bytes=',len(data),'expected=',n)"
+cd src
+python tests\tc_5.py --port 8002 --file fileC.txt
 \end{lstlisting}
 \end{enumerate}
 
@@ -311,36 +288,44 @@ print('bytes=',len(data),'expected=',n)"
   \item Prints \texttt{bytes=N expected=N}
 \end{itemize}
 
-\textbf{Observed:} Header printed as \texttt{Content-Length: N} and received byte count equaled \texttt{N}.
+\textbf{Observed:}
+\begin{lstlisting}
+Content-Length: 38
+bytes=38 expected=38
+\end{lstlisting}
 
 \textbf{Result:} PASS.
 
 \subsection{TC6 (1pt): Timeout/failure + discard partial file}
-\textbf{Goal:} Verify failed transfers do not leave partial files and sync continues.
+\textbf{Goal:} Verify failed transfers do not leave partial files and synchronization can recover after peer restart.
 
-\textbf{Setup:} Create a larger file to make partial transfer reproducible (e.g., 5--20MB).
+\textbf{Setup:} Create a larger file in Peer3 using the helper script:
 \begin{lstlisting}
 cd src\Peer3
-python -c "open('big.bin','wb').write(b'A'*10_000_000)"
+python ..\tests\tc_6.py
 \end{lstlisting}
 
 \textbf{Steps:}
 \begin{enumerate}[noitemsep]
-  \item Start tracker and all peers; confirm directory includes \texttt{big.bin}.
-  \item Delete \texttt{Peer1/big.bin} (if present).
-  \item Trigger a download by waiting for sync to start, then \textbf{force-stop Peer3 while transfer is in progress}
-        (close the Peer3 terminal).
-  \item Check \texttt{Peer1/} for leftover partial file: \texttt{big.bin.part}.
-  \item Restart Peer3 and wait for another sync cycle.
+  \item Start tracker and peers; confirm directory includes \texttt{big.bin}.
+  \item Delete \texttt{src/Peer1/big.bin} if present.
+  \item Wait for sync to begin, then force-stop Peer3 while transfer is in progress (close the Peer3 terminal).
+  \item Verify Peer1 does not keep a partial file (no \texttt{big.bin.part} remains).
+  \item Restart Peer3 and wait another sync cycle.
+  \item Verify the final downloaded file matches Peer3 using:
+\begin{lstlisting}
+cd src
+python tests\compare_files.py Peer3\big.bin Peer1\big.bin
+\end{lstlisting}
 \end{enumerate}
 
 \textbf{Expected:}
 \begin{itemize}[noitemsep]
   \item If the transfer is interrupted, Peer1 does not keep a partial file (no \texttt{.part} remains).
-  \item After Peer3 is restarted, Peer1 successfully downloads \texttt{big.bin}.
+  \item After Peer3 restarts, Peer1 successfully downloads \texttt{big.bin} and it matches Peer3.
 \end{itemize}
 
-\textbf{Observed:} When Peer3 was force-stopped mid-transfer, \texttt{big.bin.part} was not left behind. After restarting Peer3, Peer1 successfully retrieved \texttt{big.bin}.
+\textbf{Observed:} \texttt{tc\_6.py} generated \texttt{big.bin}. When Peer3 was force-stopped mid-transfer, \texttt{big.bin.part} was not left behind. After restarting Peer3, Peer1 retrieved \texttt{big.bin} and it matched Peer3 (verified by \texttt{compare\_files.py}).
 
 \textbf{Result:} PASS.
 
@@ -362,6 +347,6 @@ TC6: Failure handling + discard partial file (1pt) & PASS \\
 \end{center}
 
 \section{Conclusion}
-Custom test cases were designed to validate all protocol requirements and grading rubric items. The results demonstrate correct directory discovery/filtering, available-port binding, persistent tracker communication and keepalives, peer serving with \texttt{Content-Length} framing and exact byte transfer, synchronization convergence, propagation of newer file versions with mtime preservation via \texttt{os.utime()}, and robust handling of failures without leaving partial files.
+Custom test cases were designed to validate all protocol requirements and grading rubric items. The results demonstrate correct working-directory discovery and filtering, available-port binding, persistent tracker communication and keepalives, peer serving with \texttt{Content-Length} framing and exact byte transfer, convergence across peers, propagation of newer file versions with mtime preservation via \texttt{os.utime()}, and robust handling of failures without leaving partial files.
 
 \end{document}
