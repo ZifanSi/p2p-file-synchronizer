@@ -385,8 +385,13 @@ if __name__ == '__main__':
             tracker_port = int(args[1])
 
             # get a free port
-            synchronizer_port = get_next_avaliable_port(8000)
-            synchronizer_thread = FileSynchronizer(tracker_ip,tracker_port,synchronizer_port)
+            # ask OS
+            tmp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            tmp.bind(("0.0.0.0", 0))
+            synchronizer_port = tmp.getsockname()[1]
+            tmp.close()
+
+            synchronizer_thread = FileSynchronizer(tracker_ip, tracker_port, synchronizer_port)
 
             # start the thread
             synchronizer_thread.start()

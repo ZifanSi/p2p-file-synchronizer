@@ -1,5 +1,6 @@
 # p2p-file-synchronizer
 
+run_all.bat
 Output: 
 Tracker:
 Waiting for connections on port 9000
