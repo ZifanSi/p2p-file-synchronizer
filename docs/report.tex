@@ -73,18 +73,44 @@ src/
 \end{lstlisting}
 
 \section{How to Run}
-\subsection*{Reset scripts (recommended for repeatable tests)}
+
+\subsection*{Option A: Run with the provided batch script (recommended)}
 \begin{lstlisting}
-cd C:\Users\sifra\Desktop\p2p-file-synchronizer
-src\bats\clean_peer.bat (will reset peer folders to initial state with only fileA/B/C)
-src\bats\clean_port.bat (will stop all peers and tracker, useful for testing port binding and clean restarts)
+cd src
+(optional: reset peer folders to initial state with only fileA/B/C)
+bats\clean_peer.bat
+(optional: stop all peers and tracker; useful for clean restarts)
+bats\clean_port.bat
+run_all.bat
 \end{lstlisting}
 
-\subsection*{Start tracker + peers (opens multiple terminals)}
+\subsection*{Option B: Run manually without \texttt{run\_all.bat}}
+Open \textbf{4 terminals}.
+
+\textbf{Terminal 1 (Tracker):}
 \begin{lstlisting}
-cd C:\Users\sifra\Desktop\p2p-file-synchronizer
-src\run_all.bat
+cd src
+python tracker.py 127.0.0.1 9000
 \end{lstlisting}
+
+\textbf{Terminal 2 (Peer1):}
+\begin{lstlisting}
+cd src\Peer1
+python ..\fileSynchronizer.py 127.0.0.1 9000
+\end{lstlisting}
+
+\textbf{Terminal 3 (Peer2):}
+\begin{lstlisting}
+cd src\Peer2
+python ..\fileSynchronizer.py 127.0.0.1 9000
+\end{lstlisting}
+
+\textbf{Terminal 4 (Peer3):}
+\begin{lstlisting}
+cd src\Peer3
+python ..\fileSynchronizer.py 127.0.0.1 9000
+\end{lstlisting}
+
 
 \section{Protocol Summary}
 \subsection{Peer $\rightarrow$ Tracker}
