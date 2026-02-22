@@ -7,6 +7,10 @@
 \usepackage{listings}
 \usepackage{xcolor}
 \usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{float}
+
 
 \lstset{
   basicstyle=\ttfamily\small,
@@ -22,10 +26,11 @@
 \begin{document}
 \maketitle
 
-\noindent Entire codes + docs + test/run/debug files structure on GitHub: \url{https://github.com/ZifanSi/p2p-file-synchronizer}
+\noindent The complete repository, including source code, documentation, and test files, is available on GitHub: \\
+{\Large \color{blue} \url{https://github.com/ZifanSi/p2p-file-synchronizer}}
 
 \vspace{0.5em}
-\noindent Codes in the \path{src/} directory, docs in the \path{docs/} directory.
+\noindent Source files and scripts are located in the \path{src/} directory, documentation are located in the \path{docs/} directory.
 
 
 \section{Overview}
@@ -70,14 +75,21 @@ src/
 \end{lstlisting}
 
 \section{How to Run}
+\begin{lstlisting}
+cd src
+\end{lstlisting}
+
 
 \subsection*{Option A: Run with the provided batch script (recommended)}
 \begin{lstlisting}
-cd src
 (optional: reset peer folders to initial state with only fileA/B/C)
 bats\clean_peer.bat
 (optional: stop all peers and tracker; useful for clean restarts)
 bats\clean_port.bat
+
+\end{lstlisting}
+
+\begin{lstlisting}
 run_all.bat
 \end{lstlisting}
 
@@ -196,12 +208,33 @@ received from tracker: {"fileA.txt": {"ip": "127.0.0.1", "port": 8000, "mtime": 
  "fileC.txt": {"ip": "127.0.0.1", "port": 8002, "mtime": 1771289247}}
 \end{lstlisting}
 
-\begin{figure}[h]
+\begin{figure}[H]
     \centering
     \includegraphics[width=0.8\textwidth]{output.png}
     \caption{Output of the P2P File Synchronizer}
     \label{fig:output}
 \end{figure}
+
+\noindent \textbf{File Structure Before:}
+\begin{itemize}
+    \item \path{src/}
+    \begin{itemize}
+        \item \path{Peer1/} (fileA.txt)
+        \item \path{Peer2/} (fileB.txt)
+        \item \path{Peer3/} (fileC.txt)
+    \end{itemize}
+\end{itemize}
+
+
+\noindent \textbf{File Structure After:}
+\begin{itemize}
+    \item \path{src/}
+    \begin{itemize}
+        \item \path{Peer1/} (fileA.txt, fileB.txt, fileC.txt)
+        \item \path{Peer2/} (fileA.txt, fileB.txt, fileC.txt)
+        \item \path{Peer3/} (fileA.txt, fileB.txt, fileC.txt)
+    \end{itemize}
+\end{itemize}
 
 \section{Test Cases and Results}
 

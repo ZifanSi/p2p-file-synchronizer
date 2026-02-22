@@ -1,2 +1,0 @@
-Hello from Peer1.
-This is fileA.txt
