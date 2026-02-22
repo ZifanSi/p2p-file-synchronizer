@@ -6,6 +6,7 @@
 \usepackage{booktabs}
 \usepackage{listings}
 \usepackage{xcolor}
+\usepackage{graphicx}
 
 \lstset{
   basicstyle=\ttfamily\small,
@@ -21,7 +22,14 @@
 \begin{document}
 \maketitle
 
+The complete implementation, including source code, batch scripts, and test suites, is available at the following repository:
+
+\vspace{0.5em}
 \noindent GitHub: \url{https://github.com/ZifanSi/p2p-file-synchronizer}
+
+\vspace{0.5em}
+\noindent Codes in the \path{src/} directory, documentation in the \path{docs/} directory.
+
 
 \section{Overview}
 This project implements a peer-to-peer (P2P) file synchronizer using a centralized tracker for peer discovery and directory aggregation. Each peer:
@@ -68,8 +76,8 @@ src/
 \subsection*{Reset scripts (recommended for repeatable tests)}
 \begin{lstlisting}
 cd C:\Users\sifra\Desktop\p2p-file-synchronizer
-src\bats\clean_peer.bat
-src\bats\clean_port.bat
+src\bats\clean_peer.bat (will reset peer folders to initial state with only fileA/B/C)
+src\bats\clean_port.bat (will stop all peers and tracker, useful for testing port binding and clean restarts)
 \end{lstlisting}
 
 \subsection*{Start tracker + peers (opens multiple terminals)}
@@ -165,6 +173,13 @@ received from tracker: {"fileA.txt": {"ip": "127.0.0.1", "port": 8000, "mtime": 
  "fileC.txt": {"ip": "127.0.0.1", "port": 8002, "mtime": 1771289247}}
 \end{lstlisting}
 
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{output.png}
+    \caption{Output of the P2P File Synchronizer}
+    \label{fig:output}
+\end{figure}
+
 \section{Test Cases and Results}
 
 \subsection{TC0 (1pt): Working-directory file filtering via \texttt{get\_file\_info()}}
@@ -244,7 +259,7 @@ Peer3: Waiting for connections on port 8002
 
 \textbf{Steps:}
 \begin{enumerate}[noitemsep]
-  \item Run \texttt{src\bats\clean\_peer.bat}.
+  \item Run \path{src\bats\clean_peer.bat}.
   \item Start tracker and peers.
   \item Wait 1--2 sync cycles.
   \item Check each peer folder contents.
@@ -266,7 +281,7 @@ Peer3: fileA.txt fileB.txt fileC.txt
 
 \textbf{Steps:}
 \begin{enumerate}[noitemsep]
-  \item Stop all peers (or run \texttt{src\bats\clean\_port.bat}).
+  \item Stop all peers (or run \path{src\bats\clean_port.bat}).
   \item Append a line to \texttt{src/Peer2/fileB.txt} and save (mtime increases).
   \item Restart tracker and peers; wait 1--2 sync cycles.
   \item Record mtimes using the helper script:
