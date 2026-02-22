@@ -65,22 +65,18 @@ src/
 \end{lstlisting}
 
 \section{How to Run}
-\subsection*{Optional reset scripts}
-Stop all python listeners on known ports:
+\subsection*{Reset scripts (recommended for repeatable tests)}
 \begin{lstlisting}
+cd C:\Users\sifra\Desktop\p2p-file-synchronizer
+src\bats\clean_peer.bat
 src\bats\clean_port.bat
 \end{lstlisting}
-Reset peer folders to a known starting state (for repeatable tests):
-\begin{lstlisting}
-src\bats\clean_peer.bat
-\end{lstlisting}
 
-\subsection*{Tracker + Peers}
+\subsection*{Start tracker + peers (opens multiple terminals)}
 \begin{lstlisting}
-cd src
-run_all.bat
+cd C:\Users\sifra\Desktop\p2p-file-synchronizer
+src\run_all.bat
 \end{lstlisting}
-(Alternatively, start tracker and each peer in separate terminals.)
 
 \section{Protocol Summary}
 \subsection{Peer $\rightarrow$ Tracker}
@@ -125,16 +121,48 @@ The following test cases are designed to cover every graded requirement:
   \item TC6: timeout/failure handling + discard partial file (1pt)
 \end{itemize}
 
-\section{Selected Runtime Output Evidence (excerpt)}
+\section{Selected Runtime Output Evidence (localhost run)}
+The following excerpts are copied from an actual run on localhost using:
+\begin{itemize}[noitemsep]
+  \item Tracker port: \textbf{9000}
+  \item Peer1 port: \textbf{8000}
+  \item Peer2 port: \textbf{8001}
+  \item Peer3 port: \textbf{8002}
+\end{itemize}
+
 \subsection*{Tracker (excerpt)}
 \begin{lstlisting}
 Waiting for connections on port 9000
-Client connected with 127.0.0.1:XXXXX
-Client connected with 127.0.0.1:YYYYY
-Client connected with 127.0.0.1:ZZZZZ
+Client connected with 127.0.0.1:51543
+Client connected with 127.0.0.1:51545
+Client connected with 127.0.0.1:51546
 client server127.0.0.1:8000
 client server127.0.0.1:8001
 client server127.0.0.1:8002
+\end{lstlisting}
+
+\subsection*{Peer directory responses (excerpt)}
+\begin{lstlisting}
+Peer1:
+Waiting for connections on port 8000
+('connect to:127.0.0.1', 9000)
+received from tracker: {"fileA.txt": {"ip": "127.0.0.1", "port": 8000, "mtime": 1771289241}}
+received from tracker: {"fileA.txt": {"ip": "127.0.0.1", "port": 8000, "mtime": 1771289241},
+ "fileB.txt": {"ip": "127.0.0.1", "port": 8001, "mtime": 1771289244},
+ "fileC.txt": {"ip": "127.0.0.1", "port": 8002, "mtime": 1771289247}}
+
+Peer2:
+Waiting for connections on port 8001
+('connect to:127.0.0.1', 9000)
+received from tracker: {"fileA.txt": {"ip": "127.0.0.1", "port": 8000, "mtime": 1771289241},
+ "fileB.txt": {"ip": "127.0.0.1", "port": 8001, "mtime": 1771289244}}
+
+Peer3:
+Waiting for connections on port 8002
+('connect to:127.0.0.1', 9000)
+received from tracker: {"fileA.txt": {"ip": "127.0.0.1", "port": 8000, "mtime": 1771289241},
+ "fileB.txt": {"ip": "127.0.0.1", "port": 8001, "mtime": 1771289244},
+ "fileC.txt": {"ip": "127.0.0.1", "port": 8002, "mtime": 1771289247}}
 \end{lstlisting}
 
 \section{Test Cases and Results}
@@ -151,8 +179,8 @@ client server127.0.0.1:8002
 
 \textbf{Steps:}
 \begin{enumerate}[noitemsep]
-  \item Start tracker and Peer1.
-  \item Observe directory response received by any peer (or Peer1 itself).
+  \item Start tracker and peers.
+  \item Observe directory response received by any peer.
 \end{enumerate}
 
 \textbf{Expected:}
@@ -161,9 +189,9 @@ client server127.0.0.1:8002
   \item \texttt{mtime} values are integers.
 \end{itemize}
 
-\textbf{Observed:} Only \texttt{fileA.txt} was listed (filtered files and subfolder were not). Example:
+\textbf{Observed:} Only \texttt{fileA.txt} was listed (filtered files and subfolder were not). Example from directory response:
 \begin{lstlisting}
-"fileA.txt": {"ip":"127.0.0.1","port":800X,"mtime":1771289241}
+"fileA.txt": {"ip": "127.0.0.1", "port": 8000, "mtime": 1771289241}
 \end{lstlisting}
 
 \textbf{Result:} PASS.
@@ -173,17 +201,17 @@ client server127.0.0.1:8002
 
 \textbf{Steps:}
 \begin{enumerate}[noitemsep]
-  \item Start tracker.
+  \item Start tracker (9000).
   \item Start three peers.
 \end{enumerate}
 
 \textbf{Expected:} Each peer prints a listening port and no bind errors occur.
 
-\textbf{Observed (example):}
+\textbf{Observed (this run):}
 \begin{lstlisting}
-Waiting for connections on port 8000
-Waiting for connections on port 8001
-Waiting for connections on port 8002
+Peer1: Waiting for connections on port 8000
+Peer2: Waiting for connections on port 8001
+Peer3: Waiting for connections on port 8002
 \end{lstlisting}
 
 \textbf{Result:} PASS.
@@ -193,24 +221,21 @@ Waiting for connections on port 8002
 
 \textbf{Steps:}
 \begin{enumerate}[noitemsep]
-  \item Start tracker then peers.
+  \item Start tracker and peers.
   \item Observe tracker accepts connections and peers receive directory responses.
   \item Wait $\ge$ 10 seconds and confirm additional directory responses occur (keepalive cycles).
 \end{enumerate}
 
 \textbf{Expected:} Tracker logs 3 connections; peers receive directory JSON repeatedly.
 
-\textbf{Observed:} Tracker shows 3 connections and peer servers; peers repeatedly printed:
-\begin{lstlisting}
-received from tracker: {...}\n
-\end{lstlisting}
+\textbf{Observed:} Tracker showed three connections (ports 51543, 51545, 51546) and peers repeatedly printed \texttt{received from tracker: \{...\}}.
 
 \textbf{Result:} PASS.
 
 \subsection{TC3 (1pt): Discovery and retrieve missing files (convergence)}
 \textbf{Goal:} Verify peers download missing files and converge to the same directory.
 
-\textbf{Setup:}
+\textbf{Setup (before run):}
 \begin{itemize}[noitemsep]
   \item Peer1 has only \texttt{fileA.txt}
   \item Peer2 has only \texttt{fileB.txt}
@@ -219,7 +244,7 @@ received from tracker: {...}\n
 
 \textbf{Steps:}
 \begin{enumerate}[noitemsep]
-  \item Run \texttt{src\textbackslash{}bats\textbackslash{}clean\_peer.bat} to reset state.
+  \item Run \texttt{src\bats\clean\_peer.bat}.
   \item Start tracker and peers.
   \item Wait 1--2 sync cycles.
   \item Check each peer folder contents.
@@ -227,7 +252,7 @@ received from tracker: {...}\n
 
 \textbf{Expected:} Each peer ends with A/B/C.
 
-\textbf{Observed:}
+\textbf{Observed (after run):}
 \begin{lstlisting}
 Peer1: fileA.txt fileB.txt fileC.txt
 Peer2: fileA.txt fileB.txt fileC.txt
@@ -241,10 +266,10 @@ Peer3: fileA.txt fileB.txt fileC.txt
 
 \textbf{Steps:}
 \begin{enumerate}[noitemsep]
-  \item Stop all peers (or run \texttt{src\textbackslash{}bats\textbackslash{}clean\_port.bat}).
-  \item Append one line to \texttt{src/Peer2/fileB.txt} and save (mtime increases).
-  \item Restart tracker and peers.
-  \item Record mtimes using the provided helper script:
+  \item Stop all peers (or run \texttt{src\bats\clean\_port.bat}).
+  \item Append a line to \texttt{src/Peer2/fileB.txt} and save (mtime increases).
+  \item Restart tracker and peers; wait 1--2 sync cycles.
+  \item Record mtimes using the helper script:
 \begin{lstlisting}
 cd src
 python tests\tc_4.py Peer2\fileB.txt
@@ -265,7 +290,7 @@ python tests\compare_files.py Peer2\fileB.txt Peer3\fileB.txt
   \item Peer1/Peer3 integer mtimes equal Peer2's newer mtime (set by \texttt{os.utime()}).
 \end{itemize}
 
-\textbf{Observed:} After restart and synchronization, Peer1 and Peer3 matched Peer2's updated file (same hash via \texttt{compare\_files.py}) and mtimes (via \texttt{tc\_4.py}).
+\textbf{Observed:} After restart and synchronization, Peer1 and Peer3 matched Peer2's updated file (hash match via \texttt{compare\_files.py}) and mtimes (via \texttt{tc\_4.py}).
 
 \textbf{Result:} PASS.
 
@@ -274,7 +299,7 @@ python tests\compare_files.py Peer2\fileB.txt Peer3\fileB.txt
 
 \textbf{Steps:}
 \begin{enumerate}[noitemsep]
-  \item Start peers and identify the serving peer port for \texttt{fileC.txt} (Peer3 in this run used port 8002).
+  \item Ensure peers are running. In this run, Peer3 served files on port \textbf{8002}.
   \item Run:
 \begin{lstlisting}
 cd src
