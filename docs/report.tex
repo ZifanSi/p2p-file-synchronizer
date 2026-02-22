@@ -22,13 +22,10 @@
 \begin{document}
 \maketitle
 
-The complete implementation, including source code, batch scripts, and test suites, is available at the following repository:
+\noindent Entire codes + docs + test/run/debug files structure on GitHub: \url{https://github.com/ZifanSi/p2p-file-synchronizer}
 
 \vspace{0.5em}
-\noindent GitHub: \url{https://github.com/ZifanSi/p2p-file-synchronizer}
-
-\vspace{0.5em}
-\noindent Codes in the \path{src/} directory, documentation in the \path{docs/} directory.
+\noindent Codes in the \path{src/} directory, docs in the \path{docs/} directory.
 
 
 \section{Overview}
@@ -331,9 +328,25 @@ python tests\compare_files.py Peer2\fileB.txt Peer3\fileB.txt
   \item Peer1/Peer3 integer mtimes equal Peer2's newer mtime (set by \texttt{os.utime()}).
 \end{itemize}
 
-\textbf{Observed:} After restart and synchronization, Peer1 and Peer3 matched Peer2's updated file (hash match via \texttt{compare\_files.py}) and mtimes (via \texttt{tc\_4.py}).
+\textbf{Observed:} After restart and synchronization, \texttt{fileB.txt} on all peers had the same integer modified time and size, indicating that the newer version propagated and that the receiving peers preserved the advertised mtime via \texttt{os.utime()}.
+\begin{lstlisting}
+> python tests\tc_4.py Peer2\fileB.txt
+Peer2\fileB.txt: mtime=1771289244 size=38
+
+> python tests\tc_4.py Peer1\fileB.txt
+Peer1\fileB.txt: mtime=1771289244 size=38
+
+> python tests\tc_4.py Peer3\fileB.txt
+Peer3\fileB.txt: mtime=1771289244 size=38
+\end{lstlisting}
 
 \textbf{Result:} PASS.
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{tc4.png}
+    \caption{tc4}
+    \label{fig:tc4}
+\end{figure}
 
 \subsection{TC5 (2pt): Peer serving protocol (\texttt{Content-Length} header + exact bytes)}
 \textbf{Goal:} Verify server replies with correct header and sends exactly that many bytes.
@@ -411,8 +424,5 @@ TC6: Failure handling + discard partial file (1pt) & PASS \\
 \bottomrule
 \end{tabular}
 \end{center}
-
-\section{Conclusion}
-Custom test cases were designed to validate all protocol requirements and grading rubric items. The results demonstrate correct working-directory discovery and filtering, available-port binding, persistent tracker communication and keepalives, peer serving with \texttt{Content-Length} framing and exact byte transfer, convergence across peers, propagation of newer file versions with mtime preservation via \texttt{os.utime()}, and robust handling of failures without leaving partial files.
 
 \end{document}
