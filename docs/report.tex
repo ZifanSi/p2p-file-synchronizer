@@ -34,14 +34,15 @@
 
 
 \section{Overview}
-This project implements a peer-to-peer (P2P) file synchronizer using a centralized tracker for peer discovery and directory aggregation. Each peer:
+This P2P file synchronizer uses a central tracker to coordinate file sharing and keep peer directories in sync.
+
+Peer workflow:
 \begin{itemize}[noitemsep]
-  \item establishes one persistent TCP connection to the tracker,
-  \item advertises working-directory file metadata (name, integer mtime) on startup (Init),
-  \item sends periodic keepalive messages to maintain liveness (every 5 seconds),
-  \item receives a directory response from the tracker after each Init/KeepAlive,
-  \item downloads files that are missing locally or have older mtimes,
-  \item serves file requests to other peers using a TCP protocol with a \texttt{Content-Length} header and raw bytes.
+\item Connects to the tracker via a persistent TCP connection.
+\item Sends local file names and timestamps to the tracker.
+\item Sends keepalive signals every 5 seconds to stay active.
+\item Downloads missing or outdated files discovered through the tracker.
+\item Acts as a server to send files to other peers using a size header.
 \end{itemize}
 
 \section{Environment}
