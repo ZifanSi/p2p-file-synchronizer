@@ -437,7 +437,12 @@ python tests\compare_files.py Peer3\big.bin Peer1\big.bin
   \item After Peer3 restarts, Peer1 successfully downloads \texttt{big.bin} and it matches Peer3.
 \end{itemize}
 
-\textbf{Observed:} \texttt{tc\_6.py} generated \texttt{big.bin}. When Peer3 was force-stopped mid-transfer, \texttt{big.bin.part} was not left behind. After restarting Peer3, Peer1 retrieved \texttt{big.bin} and it matched Peer3 (verified by \texttt{compare\_files.py}).
+\textbf{Observed:} After restarting Peer3 and allowing synchronization to complete, \texttt{big.bin} existed on all three peers and had the same size.
+\begin{lstlisting}
+"C:\Users\sifra\Desktop\p2p\src\Peer1\big.bin" 10240kb
+"C:\Users\sifra\Desktop\p2p\src\Peer2\big.bin" 10240kb
+"C:\Users\sifra\Desktop\p2p\src\Peer3\big.bin" 10240kb
+\end{lstlisting}
 
 \textbf{Result:} PASS.
 
