@@ -21,3 +21,13 @@ From `src`:
 
 ```bat
 run_all.bat
+```
+
+
+
+Patch Feb.27 (PF1, PF2, PF3 in report)
+```
+Better Port Checks
+Crash Fixes
+Cleanup
+Non-blocking Sync
