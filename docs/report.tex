@@ -19,7 +19,7 @@
   columns=fullflexible
 }
 
-\title{Assignment 2: Peer-to-Peer File Synchronizer\\Report (Test Cases \& Results)}
+\title{Assignment 2: Peer-to-Peer File Synchronizer\\Report (Base + Patch Feb 27)}
 \author{Zifan Si \quad (Student \#400265867)}
 \date{\today}
 
@@ -447,6 +447,76 @@ python tests\compare_files.py Peer3\big.bin Peer1\big.bin
 
 \textbf{Result:} PASS.
 
+\section{Patch Update (Feb 27)}
+I made a few small fixes to improve error handelling in \path{src/fileSynchronizer.py}. Some were around the template. This section briefly explains what changed and how I checked it.
+
+\subsection{PF1: Better free-port check}
+\textbf{Issue:} My earlier version checked port availability by searching the output of \texttt{netstat}. That approach is not very reliable, because a port number can appear as part of a different number (for example, \texttt{8000} inside \texttt{18000}).
+
+\textbf{Fix:} I changed \texttt{check\_port\_avaliable()} so it creates a temporary socket and tries to bind directly to \texttt{("0.0.0.0", port)}. If the bind works, the port is free.
+
+\textbf{Quick check:}
+\begin{enumerate}[noitemsep]
+  \item Start Peer1, Peer2, and Peer3 from a clean state.
+  \item Check that each peer gets its own listening port.
+\end{enumerate}
+
+\textbf{Observed:}
+\begin{lstlisting}
+Peer1: Waiting for connections on port 8000
+Peer2: Waiting for connections on port 8001
+Peer3: Waiting for connections on port 8002
+\end{lstlisting}
+
+\textbf{Result:} PASS.
+
+\subsection{PF2: One failed download should not stop the whole sync}
+\textbf{Issue:} In the earlier version, if one file download failed, it could interrupt the current sync cycle.
+
+\textbf{Fix:} I updated the \texttt{sync()} logic so that a failed \texttt{syncfile(...)} call is skipped, and the peer continues checking the rest of the files instead of stopping.
+
+\textbf{Quick check:}
+\begin{enumerate}[noitemsep]
+  \item Use the TC6 setup with \texttt{big.bin} stored on Peer3.
+  \item Interrupt Peer3 while Peer1 is downloading the file.
+  \item Leave the other peers running and watch the next sync cycles.
+\end{enumerate}
+
+\textbf{Observed:} A failed transfer no longer stops later sync attempts. After Peer3 was started again, the missing file was downloaded successfully in a later cycle.
+
+\textbf{Result:} PASS.
+
+\subsection{PF3: Safer server accept loop}
+\textbf{Issue:} The peer server loop originally accepted incoming connections without much protection. If something went wrong during \texttt{accept()} or thread startup, the peer could exit unexpectedly.
+
+\textbf{Fix:} I added basic \texttt{try/except} handling around \texttt{accept()} and around the thread start, with a safe close if a connection object had already been created.
+
+\textbf{Quick check:}
+\begin{enumerate}[noitemsep]
+  \item Run the tracker and all peers normally.
+  \item Let them exchange files for several sync cycles.
+  \item Run TC5 at the same time to create extra peer requests.
+\end{enumerate}
+
+\textbf{Observed:} The peers continued serving requests normally and stayed running during repeated sync cycles.
+
+\textbf{Result:} PASS.
+
+\subsection{Patch sanity check}
+To make sure the updated file still parsed correctly after the changes, I also ran a quick syntax check.
+
+\textbf{Command run:}
+\begin{lstlisting}
+python -c "import ast, pathlib; ast.parse(pathlib.Path('src/fileSynchronizer.py').read_text(encoding='utf-8')); print('OK')"
+\end{lstlisting}
+
+\textbf{Observed:}
+\begin{lstlisting}
+OK
+\end{lstlisting}
+
+\textbf{Result:} PASS.
+
 \section{Results Summary}
 \begin{center}
 \begin{tabular}{ll}
@@ -460,6 +530,9 @@ TC3: \texttt{sync()} discovery + retrieve missing (1pt) & PASS \\
 TC4: \texttt{sync()} overwrite newer + set mtime (1pt) & PASS \\
 TC5: \texttt{process\_message()} Content-Length + exact bytes (2pt) & PASS \\
 TC6: Failure handling + discard partial file (1pt) & PASS \\
+PF1: Patch check - reliable free-port detection & PASS \\
+PF2: Patch check - skip failed download, continue sync & PASS \\
+PF3: Patch check - guarded accept/thread handling & PASS \\
 \bottomrule
 \end{tabular}
 \end{center}

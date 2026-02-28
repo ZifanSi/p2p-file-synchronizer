@@ -90,9 +90,14 @@ def check_port_avaliable(check_port):
     Returns:
     True if valid; False otherwise
     """
-    if str(check_port) in os.popen("netstat -na").read():
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.bind(("0.0.0.0", int(check_port)))
+        return True
+    except Exception:
         return False
-    return True
+    finally:
+        sock.close()
 	
 def get_next_avaliable_port(initial_port):
     """Get the next available port by searching from initial_port to 2^16 - 1
@@ -218,8 +223,18 @@ class FileSynchronizer(threading.Thread):
         print(('Waiting for connections on port %s' % (self.port)))
         while True:
             #Hint: guard accept() with try/except and exit cleanly on failure
-            conn, addr = self.server.accept()
-            threading.Thread(target=self.process_message, args=(conn,addr)).start()
+            try:
+                conn, addr = self.server.accept()
+            except Exception as exc:
+                print(("Server accept failed", exc))
+                break
+            try:
+                threading.Thread(target=self.process_message, args=(conn,addr)).start()
+            except Exception:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     #Send Init or KeepAlive message to tracker, handle directory response message
     #and  request files from peers
@@ -287,7 +302,11 @@ class FileSynchronizer(threading.Thread):
                 need = True
 
             if need:
-                self.syncfile(fname, info)
+                try:
+                    self.syncfile(fname, info)
+                except Exception:
+                    # Skip failed peer fetch and continue syncing other files.
+                    pass
         #Step 4. construct a KeepAlive message
         #Note KeepAlive msg is sent multiple times, the format can be found in Table 1
         #use json.dumps to convert python dict to json string.
@@ -361,6 +380,13 @@ class FileSynchronizer(threading.Thread):
             #Step 5. set mtime using os.utime
             os.utime(filename, (mtime, mtime))
 
+        except Exception:
+            if os.path.exists(tmp):
+                try:
+                    os.remove(tmp)
+                except Exception:
+                    pass
+            return
         finally:
             try:
                 peer.close()
