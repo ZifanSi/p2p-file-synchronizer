@@ -1,51 +1,23 @@
-# p2p-file-synchronizer
-cd C:\Users\sifra\Desktop\p2p-file-synchronizer
-src\bats\clean_peers.bat
-src\bats\clean_port.bat
-src\run_all.bat
+# Peer-to-Peer File Synchronizer
 
-Before
-Peer 1: file A
-Peer 2: file B
-Peer 3: file C
-Tracker.py terminal 
-Waiting for connections on port 9000
-Client connected with 127.0.0.1:51543
-Client connected with 127.0.0.1:51545
-Client connected with 127.0.0.1:51546
-client server127.0.0.1:8000
-client server127.0.0.1:8001
-client server127.0.0.1:8002
+Simple Python P2P file sync project.
 
+## Files
 
-Peer 1  terminal 
-Waiting for connections on port 8000
-Waiting for connections on port 8000
-('connect to:127.0.0.1', 9000)
-received from tracker: {"fileA.txt": {"ip": "127.0.0.1", "port": 8000, "mtime": 1771289241}}
-received from tracker: {"fileA.txt": {"ip": "127.0.0.1", "port": 8000, "mtime": 1771289241},
- "fileB.txt": {"ip": "127.0.0.1", "port": 8001, "mtime": 1771289244},
- "fileC.txt": {"ip": "127.0.0.1", "port": 8002, "mtime": 1771289247}}
+- `src/fileSynchronizer.py` - peer program
+- `src/tracker.py` - tracker for testing
+- `src/run_all.bat` - run test setup
+- `src/bats/clean_peer.bat` - reset peer folders
+- `src/bats/clean_port.bat` - clean used ports
+- `src/Peer1/` - peer 1 files
+- `src/Peer2/` - peer 2 files
+- `src/Peer3/` - peer 3 files
+- `src/tests/` - test files
+- `src/big.bin` - large file test
 
-Peer2  terminal 
-Waiting for connections on port 8001
-('connect to:127.0.0.1', 9000)
-received from tracker: {"fileA.txt": {"ip": "127.0.0.1", "port": 8000, "mtime": 1771289241},
- "fileB.txt": {"ip": "127.0.0.1", "port": 8001, "mtime": 1771289244}}
-received from tracker: {"fileA.txt": {"ip": "127.0.0.1", "port": 8000, "mtime": 1771289241},
- "fileB.txt": {"ip": "127.0.0.1", "port": 8001, "mtime": 1771289244},
- "fileC.txt": {"ip": "127.0.0.1", "port": 8002, "mtime": 1771289247}}
+## Run
 
+From `src`:
 
-peer 3  terminal 
-Waiting for connections on port 8002
-('connect to:127.0.0.1', 9000)
-received from tracker: {"fileA.txt": {"ip": "127.0.0.1", "port": 8000, "mtime": 1771289241},
- "fileB.txt": {"ip": "127.0.0.1", "port": 8001, "mtime": 1771289244},
- "fileC.txt": {"ip": "127.0.0.1", "port": 8002, "mtime": 1771289247}}
-
-
- after: Before
-Peer 1: file A,B,C
-Peer 2: file A,B,C
-Peer 3: file A,B,C
+```bat
+run_all.bat
